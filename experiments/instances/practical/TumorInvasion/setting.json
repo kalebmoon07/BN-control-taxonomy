@@ -1,0 +1,11 @@
+{
+    "inputs": {},
+    "target": {
+        "CellCycleArrest": 1,
+        "EMT": 1,
+        "Invasion": 1,
+        "Migration": 1,
+        "Metastasis": 1,
+        "Apoptosis": 0
+    }
+}

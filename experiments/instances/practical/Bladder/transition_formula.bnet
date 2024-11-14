@@ -1,0 +1,39 @@
+# model in BoolNet format
+# the header targets, factors is mandatory to be importable in the R package BoolNet
+
+targets, factors
+AKT,              PI3K
+ATM_b1,           !DNAdamage&ATM_b1&ATM_b2 | DNAdamage
+ATM_b2,           DNAdamage&E2F1_b1&ATM_b1
+Apoptosis_b1,     !Apoptosis_b1&!E2F1_b1&TP53 | !Apoptosis_b1&E2F1_b1&!E2F1_b2&TP53 | !Apoptosis_b1&E2F1_b1&E2F1_b2 | Apoptosis_b1&!Apoptosis_b2&!E2F1_b1&TP53 | Apoptosis_b1&!Apoptosis_b2&E2F1_b1&!E2F1_b2&TP53 | Apoptosis_b1&!Apoptosis_b2&E2F1_b1&E2F1_b2 | Apoptosis_b1&Apoptosis_b2
+Apoptosis_b2,     Apoptosis_b1&E2F1_b1&E2F1_b2
+CDC25A,           !E2F1_b1&E2F3_b1&!RBL2&!CHEK1_2_b1 | E2F1_b1&!RBL2&!CHEK1_2_b1
+CHEK1_2_b1,       !ATM_b1&CHEK1_2_b1&CHEK1_2_b2 | ATM_b1
+CHEK1_2_b2,       E2F1_b1&ATM_b1&CHEK1_2_b1
+CyclinA,          !E2F1_b1&E2F3_b1&CDC25A&!RBL2&!p21CIP | E2F1_b1&CDC25A&!RBL2&!p21CIP
+CyclinD1,         !RAS&!p16INK4a&!p21CIP&AKT | RAS&!p16INK4a&!p21CIP
+CyclinE1,         !E2F1_b1&E2F3_b1&CDC25A&!RBL2&!p21CIP | E2F1_b1&CDC25A&!RBL2&!p21CIP
+DNAdamage,        DNAdamage
+E2F1_b1,          !RAS&!E2F1_b1&E2F3_b1&!RB1&!RBL2 | !RAS&E2F1_b1&!E2F1_b2&E2F3_b1&!RB1&!RBL2 | !RAS&E2F1_b1&E2F1_b2 | RAS&!E2F1_b1&!RB1&!RBL2 | RAS&E2F1_b1&!E2F1_b2&!RB1&!RBL2 | RAS&E2F1_b1&E2F1_b2
+E2F1_b2,          !RAS&E2F1_b1&E2F3_b1&E2F3_b2&!RB1&!RBL2&ATM_b1&ATM_b2&CHEK1_2_b1&CHEK1_2_b2 | RAS&E2F1_b1&!RB1&!RBL2&ATM_b1&ATM_b2&CHEK1_2_b1&CHEK1_2_b2
+E2F3_b1,          !RAS&E2F3_b1&E2F3_b2 | RAS&!E2F3_b1&!RB1 | RAS&E2F3_b1&!E2F3_b2&!RB1 | RAS&E2F3_b1&E2F3_b2
+E2F3_b2,          RAS&E2F3_b1&!RB1&CHEK1_2_b1&CHEK1_2_b2
+EGFR,             !EGFR_stimulus&!FGFR3&!GRB2&SPRY | EGFR_stimulus&!FGFR3&!GRB2
+EGFR_stimulus,    EGFR_stimulus
+FGFR3,            FGFR3_stimulus&!EGFR&!GRB2
+FGFR3_stimulus,   FGFR3_stimulus
+GRB2,             !EGFR&FGFR3&!GRB2&!SPRY | EGFR
+GrowthInhibitors, GrowthInhibitors
+Growth_Arrest,    !RB1&!RBL2&p21CIP | !RB1&RBL2 | RB1
+MDM2,             !RB1&!ATM_b1&!TP53&!p14ARF&AKT | !RB1&!ATM_b1&TP53&!p14ARF
+PI3K,             RAS&!PTEN&GRB2
+PTEN,             TP53
+Proliferation,    !CyclinE1&CyclinA | CyclinE1
+RAS,              !EGFR&!FGFR3&GRB2 | !EGFR&FGFR3 | EGFR
+RB1,              !CyclinD1&!CyclinE1&!CyclinA&!p16INK4a
+RBL2,             !CyclinD1&!CyclinE1
+SPRY,             RAS
+TP53,             !E2F1_b1&ATM_b1&CHEK1_2_b1&!MDM2 | E2F1_b1&!E2F1_b2&ATM_b1&CHEK1_2_b1&!MDM2 | E2F1_b1&E2F1_b2&!MDM2
+p14ARF,           E2F1_b1
+p16INK4a,         GrowthInhibitors&!RB1
+p21CIP,           !GrowthInhibitors&!CyclinE1&TP53&!AKT | GrowthInhibitors&!CyclinE1&!AKT

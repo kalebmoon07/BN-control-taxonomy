@@ -1,0 +1,11 @@
+{
+    "inputs": {
+        "GrowthInhibitors": 1,
+        "EGFR_stimulus": 1,
+        "FGFR3_stimulus": 1
+    },
+    "target": {
+        "Apoptosis_b1": 1,
+        "RB1": 1
+    }
+}

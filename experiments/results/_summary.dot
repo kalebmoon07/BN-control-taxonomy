@@ -1,0 +1,34 @@
+strict digraph  {
+"PBN-mc-async";
+ActoNet;
+Caspo;
+BoNesis;
+"PBN-perc";
+"PBN-mc-sync";
+"SM-bf";
+"PBN-trap";
+"SM-merge-int";
+"SM-merge-min";
+"PBN-mc-async" -> ActoNet;
+Caspo -> "PBN-mc-async";
+Caspo -> ActoNet;
+Caspo -> BoNesis;
+Caspo -> "PBN-perc";
+Caspo -> "PBN-mc-sync";
+Caspo -> "SM-bf";
+BoNesis -> ActoNet;
+"PBN-perc" -> "PBN-mc-async";
+"PBN-perc" -> ActoNet;
+"PBN-perc" -> BoNesis;
+"PBN-perc" -> "PBN-mc-sync";
+"PBN-perc" -> "SM-bf";
+"PBN-mc-sync" -> ActoNet;
+"SM-bf" -> "PBN-mc-async";
+"SM-bf" -> ActoNet;
+"SM-bf" -> BoNesis;
+"SM-bf" -> "PBN-perc";
+"SM-bf" -> "PBN-mc-sync";
+"PBN-trap" -> ActoNet;
+"PBN-trap" -> BoNesis;
+"SM-merge-int" -> "SM-merge-min";
+}

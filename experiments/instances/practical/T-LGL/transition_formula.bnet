@@ -1,0 +1,64 @@
+# model in BoolNet format
+# the header targets, factors is mandatory to be importable in the R package BoolNet
+
+targets, factors
+A20,                    NFKB
+Apoptosis,              Caspase
+BID,                    !BclxL&!Caspase&GZMB&!MCL1 | !BclxL&Caspase&!MCL1
+BclxL,                  !BID&!DISC&!GZMB&!NFKB&STAT3 | !BID&!DISC&!GZMB&NFKB
+CD45,                   CD45
+CREB,                   ERK&IFNG
+CTLA4,                  TCR
+Caspase,                !BID&DISC | BID&!DISC&!GZMB&!IAP&TRADD | BID&!DISC&GZMB&!IAP | BID&DISC
+Ceramide,               Fas&!S1P
+Cytoskeleton_signaling, FYN
+DISC,                   !Ceramide&!FLIP&Fas&FasT | !Ceramide&FLIP&Fas&FasT&IL2 | Ceramide&FasT
+ERK,                    MEK&PI3K
+FLIP,                   !CREB&!DISC&NFKB | CREB&!DISC&!IFNG&NFKB | CREB&!DISC&IFNG
+FYN,                    !IL2RB&TCR | IL2RB
+Fas,                    FasL&FasT&!sFas
+FasL,                   !ERK&!NFAT&!NFKB&STAT3 | !ERK&!NFAT&NFKB | !ERK&NFAT | ERK
+FasT,                   NFKB
+GAP,                    !GAP&!IL15&!IL2&RAS | GAP&!IL15&!IL2&!PDGFR&RAS | GAP&!IL15&!IL2&PDGFR
+GPCR,                   S1P
+GRB2,                   !IL2RB&ZAP70 | IL2RB
+GZMB,                   !CREB&TBET | CREB&!IFNG&TBET | CREB&IFNG
+IAP,                    !BID&NFKB
+IFNG,                   IFNGT&!IL15&!IL2&!P2&!SMAD&Stimuli | IFNGT&!IL15&IL2&!P2&!SMAD | IFNGT&IL15&!P2&!SMAD
+IFNGT,                  !NFAT&!STAT3&TBET | !NFAT&STAT3 | NFAT
+IL15,                   IL15
+IL2,                    !NFAT&!NFKB&STAT3&!TBET | !NFAT&NFKB&!TBET | NFAT&!TBET
+IL2RA,                  IL2&!IL2RA&IL2RAT
+IL2RAT,                 IL2&!NFKB&STAT3 | IL2&NFKB
+IL2RB,                  !IL15&IL2&IL2RBT | IL15&IL2RBT
+IL2RBT,                 ERK&TBET
+JAK,                    !CD45&!IFNG&!IL2RA&!IL2RB&RANTES&!SOCS | !CD45&!IFNG&!IL2RA&IL2RB&!SOCS | !CD45&!IFNG&IL2RA&!SOCS | !CD45&IFNG&!SOCS
+LCK,                    !CD45&!IL2RB&TCR&!ZAP70 | !CD45&IL2RB&!ZAP70 | CD45
+MCL1,                   !DISC&IL2RB&NFKB&PI3K&STAT3
+MEK,                    RAS
+NFAT,                   PI3K
+NFKB,                   !FLIP&!PI3K&TPL2 | !FLIP&PI3K | FLIP&!IAP&!PI3K&TPL2 | FLIP&!IAP&PI3K | FLIP&IAP&!PI3K&!TPL2&TRADD | FLIP&IAP&!PI3K&TPL2 | FLIP&IAP&PI3K
+P2,                     !IFNG&P2&!Stimuli2 | IFNG&!Stimuli2
+P27,                    STAT3
+PDGF,                   PDGF
+PDGFR,                  !PDGF&S1P | PDGF
+PI3K,                   !PDGFR&RAS | PDGFR
+PLCG1,                  !GRB2&PDGFR | GRB2
+Proliferation,          !P27&STAT3
+RANTES,                 NFKB
+RAS,                    !GAP&!GRB2&PLCG1 | !GAP&GRB2
+S1P,                    !Ceramide&SPHK1
+SMAD,                   GPCR
+SOCS,                   !IL15&!IL2&JAK
+SPHK1,                  PDGFR
+STAT3,                  JAK
+Stimuli,                Stimuli
+Stimuli2,               Stimuli2
+TAX,                    TAX
+TBET,                   !JAK&TBET | JAK
+TCR,                    !CTLA4&Stimuli
+TNF,                    NFKB
+TPL2,                   !PI3K&TAX | PI3K&!TAX&TNF | PI3K&TAX
+TRADD,                  !A20&!IAP&TNF
+ZAP70,                  !FYN&LCK
+sFas,                   FasT&S1P

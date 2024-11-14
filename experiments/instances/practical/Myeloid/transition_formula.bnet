@@ -1,0 +1,15 @@
+# model in BoolNet format
+# the header targets, factors is mandatory to be importable in the R package BoolNet
+
+targets, factors
+CEBPA,  !GATA1&CEBPA | GATA1&!FOG1&CEBPA | GATA1&FOG1&!SCL&CEBPA
+EKLF,   GATA1&!Fli1
+EgrNab, PU1&cJun&!Gfi1
+FOG1,   GATA1
+Fli1,   GATA1&!EKLF
+GATA1,  !GATA2&!GATA1&Fli1&!PU1 | !GATA2&GATA1&!PU1 | GATA2&!PU1
+GATA2,  GATA2&!GATA1&!PU1 | GATA2&GATA1&!FOG1&!PU1
+Gfi1,   CEBPA&!EgrNab
+PU1,    !GATA2&!GATA1&!CEBPA&PU1 | !GATA2&!GATA1&CEBPA
+SCL,    GATA1&!PU1
+cJun,   PU1&!Gfi1
