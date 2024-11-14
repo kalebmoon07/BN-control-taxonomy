@@ -115,6 +115,7 @@ class ExperimentHandler:
             self.bnet_fname = f"{self.input_path}/propagated.bnet"
             if not os.path.exists(self.bnet_fname):
                 propagated_mbn = mpbn.MPBooleanNetwork(self.org_bnet)
+                propagated_mbn.simplify(in_place=True)
                 for k, v in self.inputs.items():
                     propagated_mbn[k] = v
                 propagated_mbn.propagate_constants()
