@@ -1,108 +1,26 @@
 from __future__ import annotations
-import functools, json, os, re, sys
-import tempfile
+import functools, json, os, re
 from actonet import ActoNet
 from algorecell_types import *
-from typing import Dict, List
 import bonesis
 from colomoto.minibn import BooleanNetwork
 import caspo_control
-import biolqm
 import pystablemotifs as sm
 import subprocess
 import networkx as nx
-import graphviz
-from itertools import combinations, product
-from bntaxonomy.dep.control_strategies_MC import (
-    compute_control_strategies_with_model_checking,
-)
-from bntaxonomy.dep.control_strategies import run_control_problem
+from itertools import combinations
 from pyboolnet.file_exchange import bnet2primes
 import mpbn
 import cabean
 from cabean.iface import CabeanResult
-import contextlib
-import io
+from bntaxonomy.dep.control_strategies_MC import (
+    compute_control_strategies_with_model_checking,
+)
+from bntaxonomy.dep.control_strategies import run_control_problem
+from bntaxonomy.utils import CtrlResult, suppress_console_output
 
-
+cabean_path = f"{os.path.dirname(os.path.abspath(__file__))}/dep/cabean_2.0.0"
 #  TODO: extend ReprogrammingStrategies and Perturbation to do comparison, minimality check, etc.
-
-
-@contextlib.contextmanager
-def suppress_console_output():
-    with open(os.devnull, "w") as devnull:
-        # suppress stdout and
-        orig_stdout_fno = os.dup(sys.stdout.fileno())
-        os.dup2(devnull.fileno(), 1)
-        orig_stderr_fno = os.dup(sys.stderr.fileno())
-        os.dup2(devnull.fileno(), 2)
-        try:
-            yield
-        finally:
-            # restore
-            os.dup2(orig_stdout_fno, 1)
-            os.dup2(orig_stderr_fno, 2)
-
-
-def check_smaller(p1: dict[str, int], p2: dict[str, int], strict=False):
-    is_small = all(p2.get(k, -1) == v for k, v in p1.items())
-    if is_small and strict:
-        is_small = is_small and not (p1.keys() == p2.keys())
-    return is_small
-
-
-class CtrlResult:
-    def __init__(
-        self, name: str, d_list: List[Dict[str, int]], sort=True, only_minimal=True
-    ) -> None:
-        self.name = name
-        self.d_list = d_list
-        if only_minimal:
-            self.drop_nonminimal()
-        if sort:
-            self.sort_d_list()
-
-    def __repr__(self) -> str:
-        return f"CtrlResult({self.name})"
-
-    def __str__(self) -> str:
-        return f"{self.d_list}"
-
-    def iter_ctrl_not_included_by(self, other: CtrlResult) -> bool:
-        return (
-            x
-            for x in self.d_list
-            if not any(
-                # all(x.get(yk, -1) == yv for yk, yv in y.items()) for y in other.d_list
-                check_smaller(y, x)
-                for y in other.d_list
-            )
-        )
-
-    def is_stronger_than(self, other: CtrlResult) -> bool:
-        for ctrl in other.iter_ctrl_not_included_by(self):
-            return False
-        return True
-
-    def dump(self, fname):
-        with open(fname, "w") as _f:
-            json.dump(self.d_list, _f)
-
-    def sort_d_list(self):
-        d_list = [dict(sorted(x.items())) for x in self.d_list]
-        d_list.sort(key=lambda x: (len(x), sorted(x.items())))
-        self.d_list = d_list
-
-    # def drop_duplicates(self):
-    #     self.d_list = list({tuple(d.items()) for d in self.d_list})
-    #     self.d_list = [dict(x) for x in self.d_list]
-
-    def drop_nonminimal(self):
-        d_list = list()
-        for ctrl in self.d_list:
-            if not any(True for other in d_list if check_smaller(other, ctrl)):
-                d_list.append(ctrl)
-        self.d_list = d_list
 
 
 def refine_pert(s: ReprogrammingStrategies):
@@ -138,10 +56,11 @@ class ExperimentRun:
                 self.G.add_edge(r1.name, r2.name)
 
     def save(self, fname: str):
-        nx.nx_pydot.write_dot(self.G, f"{fname}.dot")
-        tred_cmd = f"tred {fname}.dot | dot -T png > {fname}.png"
-        process = subprocess.Popen(tred_cmd, shell=True)
-        process.wait()
+        with suppress_console_output():
+            nx.nx_pydot.write_dot(self.G, f"{fname}.dot")
+            tred_cmd = f"tred {fname}.dot | dot -T png > {fname}.png"
+            process = subprocess.Popen(tred_cmd, shell=True)
+            process.wait()
 
     @staticmethod
     def from_folder(opath: str, name: str = ""):
@@ -340,11 +259,11 @@ class ExperimentHandler:
             )
         )
 
-    def ctrl_cabean_phenotype(self, max_size: int, method: str, **kwargs):
+    def ctrl_cabean_phenotype(self, max_size: int, method: str, _debug=False, **kwargs):
         assert method in ["ITC", "TTC", "PTC"]
         # TODO limit max_size
         cmd = [
-            "./cabean_2.0.0",
+            cabean_path,
             "-compositional",
             "2",
             "-control",
@@ -353,9 +272,7 @@ class ExperimentHandler:
             self.cabean_target_fname,
             self.cabean_bn_fname,
         ]
-        # cmd =  f"sh ./cabean_2.0.0 -compositional 2 -control {method} -tmarker {self.cabean_target_fname} {self.cabean_bn_fname}"
         output = subprocess.run(cmd, capture_output=True)
-        # return output
         result = CabeanResult(self.cabean.iface, output.stdout.decode())
         ctrl_list = []
         line_iter = iter(result.lines)
@@ -364,10 +281,15 @@ class ExperimentHandler:
             line = next(line_iter, "")
 
         for line in line_iter:
-            print(line)
+            if _debug:
+                print(line)
             line: str
             if line.startswith("There is only one attractor."):
-                ctrl_list.append(dict())
+                # TODO: accept if phenotype is satisfied
+                print(line, self.cabean.attractors)
+            if line.startswith("Error:"):
+                # Error: could not find any attractor based on the markers of attractors.
+                print(line)
             if line.lower().startswith("control set"):
                 p = dict()
                 for c in line.strip().split():
