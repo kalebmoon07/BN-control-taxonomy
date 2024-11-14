@@ -4,6 +4,7 @@ from actonet import ActoNet
 from algorecell_types import *
 import bonesis
 from colomoto.minibn import BooleanNetwork
+from colomoto.types import HypercubeCollection,TrapSpaceAttractor
 import caspo_control
 import pystablemotifs as sm
 import subprocess
@@ -281,15 +282,31 @@ class ExperimentHandler:
             line = next(line_iter, "")
 
         for line in line_iter:
-            if _debug:
-                print(line)
             line: str
+            
             if line.startswith("There is only one attractor."):
-                # TODO: accept if phenotype is satisfied
-                print(line, self.cabean.attractors)
+                # Trivial solution if the target already satisfies a phenotype
+                # Otherwise, the phenotype is not satisfied
+                is_phenotype = True
+                for state in result.attractors.values():
+                    if isinstance(state,HypercubeCollection):
+                        states = state
+                    elif isinstance(state,TrapSpaceAttractor):
+                        states = [state]
+                    else:
+                        raise ValueError(f"Unknown type {type(state)}")
+                    for state in states:
+                        for k, v in self.target.items():
+                            if state[k] != v:
+                                is_phenotype = False
+                if is_phenotype:
+                    ctrl_list.append(dict())
+                if _debug:
+                    print(line, self.cabean.attractors, f"phenotype: {self.target}, {is_phenotype}")
             if line.startswith("Error:"):
                 # Error: could not find any attractor based on the markers of attractors.
-                print(line)
+                if _debug:
+                    print(line)
             if line.lower().startswith("control set"):
                 p = dict()
                 for c in line.strip().split():
