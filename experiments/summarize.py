@@ -14,8 +14,8 @@ hc = Hierarchy.from_folders(
         for inst_selected, inst in get_insts(inst_groups)
     ]
 )
-# for v1, v2 in [("SM-bf","Caspo")]:
-#     pprint.pprint(((v1,v2), [exp.name for exp in hc.ce_G.get_edge_data(v1,v2)["counterexamples"]]))
+for v1, v2 in [("PBN-perc","Caspo")]:
+    pprint.pprint(((v1,v2), [exp.name for exp in hc.ce_G.get_edge_data(v1,v2)["counterexamples"]]))
 # hc = Hierarchy.from_folders([f"results_/{inst}" for inst in inst_list])
 # for v1, v2 in [("Caspo","SM-brute-force")]:
 #     pprint.pprint(((v1,v2), [exp.name for exp in hc.ce_G.get_edge_data(v1,v2)["counterexamples"]]))

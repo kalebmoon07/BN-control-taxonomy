@@ -1,5 +1,5 @@
 import os, sys
-from bntaxonomy.experiment import ExperimentHandler
+from bntaxonomy.experiment import ExperimentHandler, ExperimentRun
 
 cwd = os.path.dirname(os.path.abspath(__file__))
 
@@ -18,8 +18,8 @@ def get_insts(inst_groups: list[str]):
 if __name__ == "__main__":
 
     max_size = 2
-    # inst_groups = [insts_practical, insts_tonello, insts_ce]
-    inst_groups = [insts_ce]
+    inst_groups = [insts_practical, insts_tonello, insts_ce]
+    # inst_groups = [insts_ce]
 
     for inst_selected, inst in get_insts(inst_groups):
         print(f"\tRunning {inst}")
@@ -54,5 +54,5 @@ if __name__ == "__main__":
         for method in ["ITC", "TTC", "PTC"]:
             exp.ctrl_cabean_phenotype(max_size, method)
 
-        exp_run = exp.get_run(inst)
+        exp_run = ExperimentRun.from_folder(opath, inst)
         exp_run.save(f"{opath}/_graph")
