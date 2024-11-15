@@ -12,6 +12,7 @@ class Hierarchy:
         self.G, self.ce_G = nx.DiGraph(), nx.DiGraph()
         nodes = set(node for exp in self.exp_list for node in exp.G.nodes)
         self.G.add_nodes_from(nodes)
+        self.ce_G.add_nodes_from(nodes)
         for v1, v2 in product(nodes, nodes):
             if v1 == v2:
                 continue

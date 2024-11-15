@@ -1,10 +1,11 @@
 from __future__ import annotations
 import functools, json, os, re
+import tempfile
 from actonet import ActoNet
 from algorecell_types import *
 import bonesis
 from colomoto.minibn import BooleanNetwork
-from colomoto.types import HypercubeCollection,TrapSpaceAttractor
+from colomoto.types import HypercubeCollection, TrapSpaceAttractor
 import caspo_control
 import pystablemotifs as sm
 import subprocess
@@ -112,16 +113,18 @@ class ExperimentHandler:
 
         # Load the Boolean network for experiments
         if use_propagated:
-            self.bnet_fname = f"{self.input_path}/propagated.bnet"
-            if not os.path.exists(self.bnet_fname):
-                propagated_mbn = mpbn.MPBooleanNetwork(self.org_bnet)
-                propagated_mbn.simplify(in_place=True)
-                for k, v in self.inputs.items():
-                    propagated_mbn[k] = v
-                propagated_mbn.propagate_constants()
-                for k, v in propagated_mbn.constants().items():
-                    propagated_mbn.pop(k)
-                propagated_mbn.save(self.bnet_fname)
+            tempfile
+            fd, self.bnet_fname = tempfile.mkstemp(suffix=".bnet", prefix="propagated")
+            os.close(fd)
+            # self.bnet_fname = f"{self.input_path}/propagated.bnet"
+            propagated_mbn = mpbn.MPBooleanNetwork(self.org_bnet)
+            propagated_mbn.simplify(in_place=True)
+            for k, v in self.inputs.items():
+                propagated_mbn[k] = v
+            propagated_mbn.propagate_constants()
+            for k, v in propagated_mbn.constants().items():
+                propagated_mbn.pop(k)
+            propagated_mbn.save(self.bnet_fname)
             self.bn = BooleanNetwork(data=self.bnet_fname)
         else:
             self.bn = self.org_bnet
@@ -134,7 +137,7 @@ class ExperimentHandler:
         if precompute_sm:
             self.make_sm_primes()
 
-        self.cabean = None
+        self.cabean, self.cabean_bn_fname, self.cabean_target_fname = None, None, None
         if precompute_cabean:
             self.make_cabean()
 
@@ -150,10 +153,12 @@ class ExperimentHandler:
     def make_cabean(self):
         if self.cabean is None:
             self.cabean = cabean.load(self.bn)
-            self.cabean_bn_fname = f"{self.input_path}/bn.ispl"
-            self.cabean_target_fname = f"{self.input_path}/phenotype.txt"
-            # fd, tmpfile = tempfile.mkstemp(suffix=".ispl", prefix="cabean")
-            # os.close(fd)
+            # self.cabean_bn_fname = f"{self.input_path}/bn.ispl"
+            # self.cabean_target_fname = f"{self.input_path}/phenotype.txt"
+            fd, self.cabean_bn_fname = tempfile.mkstemp(suffix=".ispl", prefix="cabean_bn")
+            os.close(fd)
+            fd, self.cabean_target_fname = tempfile.mkstemp(suffix=".txt", prefix="cabean_target")
+            os.close(fd)
             with open(self.cabean_target_fname, "w") as _f:
                 _f.write("node, value\n")
                 for k, v in self.target.items():
@@ -203,6 +208,7 @@ class ExperimentHandler:
 
     def ctrl_pyboolnet_mc(self, max_size: int, update: str, **kwargs):
         assert update in ["synchronous", "asynchronous"]
+        self.make_pbn_primes()
         with suppress_console_output():
             result = compute_control_strategies_with_model_checking(
                 primes=self.pbn_primes,
@@ -218,6 +224,7 @@ class ExperimentHandler:
 
     def ctrl_pyboolnet_heuristics(self, max_size: int, control_type: str, **kwargs):
         assert control_type in ["percolation", "trap_spaces"]
+        self.make_pbn_primes()
         with suppress_console_output():
             results = run_control_problem(
                 primes=self.pbn_primes,
@@ -233,6 +240,7 @@ class ExperimentHandler:
         )
 
     def ctrl_pystablemotif_brute_force(self, max_size: int, **kwargs):
+        self.make_sm_primes()
         result = sm.drivers.knock_to_partial_state(
             self.target,
             self.sm_primes,
@@ -247,7 +255,7 @@ class ExperimentHandler:
     ):
         assert target_method in ["merge", "history"]
         assert driver_method in ["minimal", "internal"]
-
+        self.make_sm_primes()
         result = self.sm_attrs.reprogram_to_trap_spaces(
             self.target,
             target_method=target_method,
@@ -263,6 +271,7 @@ class ExperimentHandler:
 
     def ctrl_cabean_phenotype(self, max_size: int, method: str, _debug=False, **kwargs):
         assert method in ["ITC", "TTC", "PTC"]
+        self.make_cabean()
         # TODO limit max_size
         cmd = [
             cabean_path,
@@ -284,15 +293,15 @@ class ExperimentHandler:
 
         for line in line_iter:
             line: str
-            
+
             if line.startswith("There is only one attractor."):
                 # Trivial solution if the target already satisfies a phenotype
                 # Otherwise, the phenotype is not satisfied
                 is_phenotype = True
                 for state in result.attractors.values():
-                    if isinstance(state,HypercubeCollection):
+                    if isinstance(state, HypercubeCollection):
                         states = state
-                    elif isinstance(state,TrapSpaceAttractor):
+                    elif isinstance(state, TrapSpaceAttractor):
                         states = [state]
                     else:
                         raise ValueError(f"Unknown type {type(state)}")
@@ -303,7 +312,11 @@ class ExperimentHandler:
                 if is_phenotype:
                     ctrl_list.append(dict())
                 if _debug:
-                    print(line, self.cabean.attractors, f"phenotype: {self.target}, {is_phenotype}")
+                    print(
+                        line,
+                        self.cabean.attractors,
+                        f"phenotype: {self.target}, {is_phenotype}",
+                    )
             if line.startswith("Error:"):
                 # Error: could not find any attractor based on the markers of attractors.
                 if _debug:
