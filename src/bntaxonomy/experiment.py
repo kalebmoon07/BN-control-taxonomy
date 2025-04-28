@@ -1,49 +1,12 @@
 from __future__ import annotations
-import functools, json, os, re
-import tempfile
-from actonet import ActoNet
-from algorecell_types import *
-import bonesis
+import json, os
+
 from colomoto.minibn import BooleanNetwork
-from colomoto.types import HypercubeCollection, TrapSpaceAttractor
-import caspo_control
-import pystablemotifs as sm
+
 import subprocess
 import networkx as nx
 from itertools import combinations
-from pyboolnet.file_exchange import bnet2primes
-import mpbn
-import cabean
-from cabean.iface import CabeanResult
-from bntaxonomy.dep.control_strategies_MC import (
-    compute_control_strategies_with_model_checking,
-)
-from bntaxonomy.dep.control_strategies import run_control_problem
 from bntaxonomy.utils import CtrlResult, suppress_console_output
-
-cabean_path = f"{os.path.dirname(os.path.abspath(__file__))}/dep/cabean_2.0.0"
-#  TODO: extend ReprogrammingStrategies and Perturbation to do comparison, minimality check, etc.
-
-
-def refine_pert(s: ReprogrammingStrategies):
-    text = str(s.perturbations())
-    d_list = []
-    pattern = re.compile(r"PermanentPerturbation\(([^)]*)\)")
-    for match in pattern.findall(text):
-        d = dict()
-        for item in match.split(", "):
-            if "=" not in item:
-                continue
-            k, v = item.split("=")
-            d[k] = int(v)
-        d_list.append(d)
-    return d_list
-
-
-class myActoNet(ActoNet):
-    def __init__(self, bn, inputs=dict()):
-        super().__init__(bn, inputs)
-        self.controls = functools.partial(self.controls, existential=False)
 
 
 class ExperimentRun:
@@ -83,13 +46,9 @@ class ExperimentHandler:
         input_path: str,
         output_path: str,
         use_propagated: bool = True,
-        precompute_pbn: bool = True,
-        precompute_sm: bool = True,
-        precompute_cabean: bool = True,
         to_console: bool = True,
         to_file: bool = True,
         only_minimal: bool = True,
-        store_results: bool = True,
     ):
         self.name = name
         self.input_path = input_path
@@ -97,7 +56,6 @@ class ExperimentHandler:
         self.to_console = to_console
         self.to_file = to_file
         self.only_minimal = only_minimal
-        self.store_results = store_results
         self.results = list()
         os.makedirs(output_path, exist_ok=True)
 
@@ -113,226 +71,136 @@ class ExperimentHandler:
 
         # Load the Boolean network for experiments
         if use_propagated:
-            tempfile
-            fd, self.bnet_fname = tempfile.mkstemp(suffix=".bnet", prefix="propagated")
-            os.close(fd)
-            # self.bnet_fname = f"{self.input_path}/propagated.bnet"
-            propagated_mbn = mpbn.MPBooleanNetwork(self.org_bnet)
-            propagated_mbn.simplify(in_place=True)
-            for k, v in self.inputs.items():
-                propagated_mbn[k] = v
-            propagated_mbn.propagate_constants()
-            for k, v in propagated_mbn.constants().items():
-                propagated_mbn.pop(k)
-            propagated_mbn.save(self.bnet_fname)
-            self.bn = BooleanNetwork(data=self.bnet_fname)
+            from bntaxonomy.iface.mpbn import propagate_bn
+
+            self.bn = propagate_bn(self.org_bnet, self.inputs)
         else:
             self.bn = self.org_bnet
 
         self.pbn_primes = None
-        if precompute_pbn:
-            self.make_pbn_primes()
-
         self.sm_attrs, self.sm_primes = None, None
-        if precompute_sm:
-            self.make_sm_primes()
+        self.cabean = None
 
-        self.cabean, self.cabean_bn_fname, self.cabean_target_fname = None, None, None
-        if precompute_cabean:
-            self.make_cabean()
+    # Preprocessing
 
     def make_pbn_primes(self):
+        from bntaxonomy.iface.pbn import make_pbn_primes_iface
+
         if self.pbn_primes is None:
-            self.pbn_primes = bnet2primes(self.bnet_fname)
+            self.pbn_primes = make_pbn_primes_iface(self.bnet_fname)
 
     def make_sm_primes(self):
+        from bntaxonomy.iface.stablemotif import make_sm_primes_iface
+
         if self.sm_primes is None:
-            self.sm_primes = sm.format.import_primes(self.bnet_fname)
-            self.sm_attrs = sm.AttractorRepertoire.from_primes(self.sm_primes)
+            self.sm_primes = make_sm_primes_iface(self.bnet_fname)
+
+    def make_sm_attrs(self):
+        from bntaxonomy.iface.stablemotif import make_sm_attrs_iface
+
+        self.make_sm_primes()
+        if self.sm_attrs is None:
+            self.sm_attrs = make_sm_attrs_iface(self.sm_primes)
 
     def make_cabean(self):
+        from bntaxonomy.iface.cabean import make_cabean_iface
+
         if self.cabean is None:
-            self.cabean = cabean.load(self.bn)
-            # self.cabean_bn_fname = f"{self.input_path}/bn.ispl"
-            # self.cabean_target_fname = f"{self.input_path}/phenotype.txt"
-            fd, self.cabean_bn_fname = tempfile.mkstemp(suffix=".ispl", prefix="cabean_bn")
-            os.close(fd)
-            fd, self.cabean_target_fname = tempfile.mkstemp(suffix=".txt", prefix="cabean_target")
-            os.close(fd)
-            with open(self.cabean_target_fname, "w") as _f:
-                _f.write("node, value\n")
-                for k, v in self.target.items():
-                    _f.write(f"{k},{v}\n")
-            with open(self.cabean_bn_fname, "w") as _f:
-                self.cabean.iface.write_ispl(_f)
+            self.cabean = make_cabean_iface(self.bn)
 
     def postprocess(self, ctrl_result: CtrlResult):
         if self.to_console:
             print(f"{ctrl_result.name:<14}", ctrl_result)
         if self.to_file:
             ctrl_result.dump(f"{self.output_path}/{ctrl_result.name}.json")
-        if self.store_results:
-            self.results.append(ctrl_result)
+        self.results.append(ctrl_result)
         if os.path.exists("program_instance.asp"):
             os.remove("program_instance.asp")
         return ctrl_result
 
-    def ctrl_ActoNet(self, max_size: int, **kwargs):
-        with suppress_console_output():
-            model = myActoNet(self.bn)
-            s = model.reprogramming_fixpoints(self.target, maxsize=max_size, **kwargs)
+    ### ActoNet
+    def ctrl_actonet_fp(self, max_size: int, **kwargs):
+        from bntaxonomy.iface.actonet import ctrl_actonet_fp_iface
+
+        results = ctrl_actonet_fp_iface(self.bn, self.target, max_size, **kwargs)
+        return self.postprocess(results)
+
+    ### BoNesis
+    def ctrl_bonesis_mts(self, max_size: int, **kwargs):
+        from bntaxonomy.iface.bonesis import ctrl_bonesis_mts_iface
+
+        results = ctrl_bonesis_mts_iface(self.bn, self.target, max_size, **kwargs)
+        return self.postprocess(results)
+
+    # TODO: option for fixed point control by BoNesis
+
+    ### Caspo
+    def ctrl_caspo_vpts(self, max_size: int, **kwargs):
+        from bntaxonomy.iface.caspo import ctrl_caspo_vpts_iface
 
         return self.postprocess(
-            CtrlResult("ActoNet", refine_pert(s), self.only_minimal)
+            ctrl_caspo_vpts_iface(self.bn, self.target, max_size, **kwargs)
         )
 
-    def ctrl_BoNesis(self, max_size: int, **kwargs):
-        # TODO: option for fixed point control
-        with suppress_console_output():
-            bo = bonesis.BoNesis(self.bn)
-            coP = bo.Some(max_size=max_size)
-            with bo.mutant(coP):
-                x = bo.cfg()
-                bo.in_attractor(x)
-                x != bo.obs(self.target)
-            results = list(coP.complementary_assignments())
-        return self.postprocess(CtrlResult("BoNesis", results, self.only_minimal))
+    ### PyBoolNet
+    def ctrl_pyboolnet_model_checking(self, max_size: int, update: str, **kwargs):
+        from bntaxonomy.iface.pbn import ctrl_pbn_attr_iface
 
-    def ctrl_Caspo(self, max_size: int, **kwargs):
-        with suppress_console_output():
-            model = caspo_control.CaspoControl(self.bn, {})
-            s = model.reprogramming_to_attractor(
-                self.target, maxsize=max_size, **kwargs
-            )
-        return self.postprocess(CtrlResult("Caspo", refine_pert(s), self.only_minimal))
-
-    def ctrl_pyboolnet_mc(self, max_size: int, update: str, **kwargs):
         assert update in ["synchronous", "asynchronous"]
+
         self.make_pbn_primes()
-        with suppress_console_output():
-            result = compute_control_strategies_with_model_checking(
-                primes=self.pbn_primes,
-                avoid_nodes=self.inputs,
-                limit=max_size,
-                target=[self.target],
-                update=update,
-                **kwargs,
-            )
-        return self.postprocess(
-            CtrlResult(f"PBN-mc-{update[:-7]}", result, self.only_minimal)
+        results = ctrl_pbn_attr_iface(
+            self.pbn_primes, self.inputs, self.target, update, max_size, **kwargs
         )
+        return self.postprocess(results)
 
     def ctrl_pyboolnet_heuristics(self, max_size: int, control_type: str, **kwargs):
+        from bntaxonomy.iface.pbn import ctrl_pbn_heuristics_iface
+
         assert control_type in ["percolation", "trap_spaces"]
+
         self.make_pbn_primes()
-        with suppress_console_output():
-            results = run_control_problem(
-                primes=self.pbn_primes,
-                avoid_nodes=self.inputs,
-                limit=max_size,
-                target=self.target,
-                control_type=control_type,
-                intervention_type="node",
-                **kwargs,
-            )
-        return self.postprocess(
-            CtrlResult(f"PBN-{control_type[:4]}", results, self.only_minimal)
+        results = ctrl_pbn_heuristics_iface(
+            self.pbn_primes, self.inputs, self.target, control_type, max_size, **kwargs
         )
+        return self.postprocess(results)
+
+    ### pystablemotifs
 
     def ctrl_pystablemotif_brute_force(self, max_size: int, **kwargs):
+        from bntaxonomy.iface.stablemotif import ctrl_sm_brute_force_iface
+
         self.make_sm_primes()
-        result = sm.drivers.knock_to_partial_state(
-            self.target,
-            self.sm_primes,
-            min_drivers=0,
-            max_drivers=max_size,
-            **kwargs,
+
+        results = ctrl_sm_brute_force_iface(
+            self.sm_primes, self.target, max_size, **kwargs
         )
-        return self.postprocess(CtrlResult("SM-bf", result, self.only_minimal))
+        return self.postprocess(results)
 
     def ctrl_pystablemotif_trapspace(
         self, max_size: int, target_method: str, driver_method: str, **kwargs
     ):
+        from bntaxonomy.iface.stablemotif import ctrl_sm_trapspace_iface
+
         assert target_method in ["merge", "history"]
         assert driver_method in ["minimal", "internal"]
-        self.make_sm_primes()
-        result = self.sm_attrs.reprogram_to_trap_spaces(
-            self.target,
-            target_method=target_method,
-            driver_method=driver_method,
-            max_drivers=max_size,
-            **kwargs,
+        self.make_sm_attrs()
+
+        results = ctrl_sm_trapspace_iface(
+            self.sm_attrs, self.target, target_method, driver_method, max_size, **kwargs
         )
-        return self.postprocess(
-            CtrlResult(
-                f"SM-{target_method}-{driver_method[:3]}", result, self.only_minimal
-            )
-        )
+        return self.postprocess(results)
+
+    ### CABEAN
 
     def ctrl_cabean_phenotype(self, max_size: int, method: str, _debug=False, **kwargs):
         assert method in ["ITC", "TTC", "PTC"]
         self.make_cabean()
         # TODO limit max_size
-        cmd = [
-            cabean_path,
-            "-compositional",
-            "2",
-            "-control",
-            method,
-            "-tmarker",
-            self.cabean_target_fname,
-            self.cabean_bn_fname,
-        ]
-        output = subprocess.run(cmd, capture_output=True)
-        result = CabeanResult(self.cabean.iface, output.stdout.decode())
-        ctrl_list = []
-        line_iter = iter(result.lines)
-        line = next(line_iter, "")
-        while not "DECOMP" in line:
-            line = next(line_iter, "")
 
-        for line in line_iter:
-            line: str
+        from bntaxonomy.iface.cabean import ctrl_target_control_iface
 
-            if line.startswith("There is only one attractor."):
-                # Trivial solution if the target already satisfies a phenotype
-                # Otherwise, the phenotype is not satisfied
-                is_phenotype = True
-                for state in result.attractors.values():
-                    if isinstance(state, HypercubeCollection):
-                        states = state
-                    elif isinstance(state, TrapSpaceAttractor):
-                        states = [state]
-                    else:
-                        raise ValueError(f"Unknown type {type(state)}")
-                    for state in states:
-                        for k, v in self.target.items():
-                            if state[k] != v:
-                                is_phenotype = False
-                if is_phenotype:
-                    ctrl_list.append(dict())
-                if _debug:
-                    print(
-                        line,
-                        self.cabean.attractors,
-                        f"phenotype: {self.target}, {is_phenotype}",
-                    )
-            if line.startswith("Error:"):
-                # Error: could not find any attractor based on the markers of attractors.
-                if _debug:
-                    print(line)
-            if line.lower().startswith("control set"):
-                p = dict()
-                for c in line.strip().split():
-                    if "=" in c:
-                        node, value = c.split("=")
-                        p[node] = int(value)
-                ctrl_list.append(p)
-            #     ctrl_list.append(result.parse_controlset(line))
-        ctrl_result = CtrlResult(f"CABEAN-{method}", ctrl_list)
-        return self.postprocess(ctrl_result)
-
-        # TODO: parse the output
-
-    def get_run(self, name: str):
-        return ExperimentRun(self.results, name)
+        results = ctrl_target_control_iface(
+            self.cabean, self.target, method, _debug, **kwargs
+        )
+        return self.postprocess(results)

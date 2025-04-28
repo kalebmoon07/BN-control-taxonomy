@@ -18,8 +18,8 @@ def get_insts(inst_groups: list[str]):
 if __name__ == "__main__":
 
     max_size = 2
-    inst_groups = [insts_practical, insts_tonello, insts_ce]
-    # inst_groups = [insts_ce]
+    # inst_groups = [insts_practical, insts_tonello, insts_ce]
+    inst_groups = [insts_ce]
 
     for inst_selected, inst in get_insts(inst_groups):
         print(f"\tRunning {inst}")
@@ -28,23 +28,14 @@ if __name__ == "__main__":
         os.makedirs(opath, exist_ok=True)
 
         exp = ExperimentHandler(
-            inst,
-            fpath,
-            opath,
-            # use_propagated=False,
-            precompute_pbn=True,
-            precompute_sm=True,
-            to_console=False,
-            to_file=True,
-            only_minimal=True,
-            store_results=True,
+            inst, fpath, opath, to_console=False, to_file=True, only_minimal=True
         )
 
-        exp.ctrl_ActoNet(max_size)
-        exp.ctrl_BoNesis(max_size)
-        exp.ctrl_Caspo(max_size)
+        exp.ctrl_actonet_fp(max_size)
+        exp.ctrl_bonesis_mts(max_size)
+        exp.ctrl_caspo_vpts(max_size)
         for update in ["synchronous", "asynchronous"]:
-            exp.ctrl_pyboolnet_mc(max_size, update)
+            exp.ctrl_pyboolnet_model_checking(max_size, update)
         for control_type in ["percolation", "trap_spaces"]:
             exp.ctrl_pyboolnet_heuristics(max_size, control_type)
         exp.ctrl_pystablemotif_brute_force(max_size)

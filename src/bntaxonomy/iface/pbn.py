@@ -1,0 +1,52 @@
+from pyboolnet.file_exchange import bnet2primes
+
+from bntaxonomy.dep.control_strategies import run_control_problem
+from bntaxonomy.dep.control_strategies_MC import (
+    compute_control_strategies_with_model_checking,
+)
+from bntaxonomy.utils import CtrlResult, suppress_console_output
+
+
+def make_pbn_primes_iface(bnet_fname: str):
+    return bnet2primes(bnet_fname)
+
+
+def ctrl_pbn_attr_iface(
+    pbn_primes: dict,
+    inputs: dict[str, int],
+    target: dict[str, int],
+    update: str,
+    max_size: int,
+    **kwargs,
+):
+    with suppress_console_output():
+        results = compute_control_strategies_with_model_checking(
+            primes=pbn_primes,
+            avoid_nodes=inputs,
+            limit=max_size,
+            target=[target],
+            update=update,
+            **kwargs,
+        )
+    return CtrlResult(f"PBN-mc-{update[:-7]}", results)
+
+
+def ctrl_pbn_heuristics_iface(
+    pbn_primes: dict,
+    inputs: dict[str, int],
+    target: dict[str, int],
+    control_type: str,
+    max_size: int,
+    **kwargs,
+):
+    with suppress_console_output():
+        results = run_control_problem(
+            primes=pbn_primes,
+            avoid_nodes=inputs,
+            limit=max_size,
+            target=target,
+            control_type=control_type,
+            intervention_type="node",
+            **kwargs,
+        )
+        return CtrlResult(f"PBN-{control_type[:4]}", results)

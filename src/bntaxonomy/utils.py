@@ -3,8 +3,10 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import re
 import sys
 
+from algorecell_types import ReprogrammingStrategies
 
 @contextlib.contextmanager
 def suppress_console_output():
@@ -80,3 +82,18 @@ class CtrlResult:
             if not any(True for other in d_list if check_smaller(other, ctrl)):
                 d_list.append(ctrl)
         self.d_list = d_list
+
+
+def refine_pert(s: ReprogrammingStrategies):
+    text = str(s.perturbations())
+    d_list = []
+    pattern = re.compile(r"PermanentPerturbation\(([^)]*)\)")
+    for match in pattern.findall(text):
+        d = dict()
+        for item in match.split(", "):
+            if "=" not in item:
+                continue
+            k, v = item.split("=")
+            d[k] = int(v)
+        d_list.append(d)
+    return d_list
