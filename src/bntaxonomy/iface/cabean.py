@@ -9,10 +9,16 @@ from cabean.iface import CabeanResult
 
 cabean_path = f"{os.path.dirname(os.path.abspath(__file__))}/../dep/cabean_2.0.0"
 
+CABEAN_OUT_MEMORY = False
+
 
 def make_cabean_iface(bn: BooleanNetwork):
-
-    return cabean.load(bn)
+    print("Loading cabean and computing attractors")
+    try:
+        return cabean.load(bn)
+    except Exception as e:
+        print(f"Error loading cabean: {e}")
+        return CABEAN_OUT_MEMORY
 
 
 def make_cabean_tempfiles(cabean_obj: CabeanInstance, target: dict[str, int]):

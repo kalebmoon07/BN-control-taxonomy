@@ -7,10 +7,12 @@ from bntaxonomy.utils.control import CtrlResult
 
 
 def make_sm_primes_iface(bnet_fname: str):
+    print("Loading primes from pystablemotifs")
     return sm.format.import_primes(bnet_fname)
 
 
 def make_sm_attrs_iface(sm_primes: dict):
+    print("Loading AttractorRepertoire from pystablemotifs")
     return sm.AttractorRepertoire.from_primes(sm_primes)
 
 

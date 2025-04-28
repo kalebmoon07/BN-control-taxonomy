@@ -84,3 +84,48 @@ class MultiInputSummary:
             graph_utils.export_dot_png(tred_fname, f"{fname}.png")
             graph_utils.cluster_cycles(tred_fname, f"{fname}_tred_scc.dot")
             graph_utils.export_dot_png(f"{fname}_tred_scc.dot", f"{fname}_tred_scc.png")
+
+    def get_exp_names(self):
+        return [exp.name for exp in self.exp_list]
+
+    def to_conflict_matrix(self):
+        # conflict_matrix = nx.to_numpy_array(self.ce_G, nodelist=self.ce_G.nodes())
+        # return conflict_matrix
+        column_str = """
+                        \\newcolumntype{O}[2]{%
+                            >{\\adjustbox{angle=#1,lap=\\width-(#2)}\\bgroup} l <{\\egroup}%
+                        }
+                        \\NewDocumentCommand{\\rot}{O{90} O{1em} m}{\\makebox[#2][l]{\\rotatebox{#1}{#3}}}%
+                        \\setlength{\\cmidrulekern}{2.5pt}
+                    """
+        nodes = sorted(self.ce_G.nodes())  # fix consistent order
+        n = len(nodes)
+        matrix = [["" for _ in range(n)] for _ in range(n)]
+
+        node_idx = {node: idx for idx, node in enumerate(nodes)}
+        exp_names = self.get_exp_names()
+        for src, dst, data in self.ce_G.edges(data=True):
+            if "counterexamples" in data and data["counterexamples"]:
+                example = data["counterexamples"][0].name  # assuming .name exists
+                i = node_idx[src]
+                j = node_idx[dst]
+                matrix[i][j] = str(exp_names.index(example))
+
+        # Build LaTeX tabular code
+        latex = [column_str]
+        latex.append("\\begin{tabular}{" + "|".join("c" * (n + 1)) + "}")
+        latex.append("\\hline")
+
+        # Header
+        # header = [""] + list(nodes)
+        header = [""] + [f"\\rot{{{node}}}" for node in nodes]
+        latex.append(" & ".join(header) + " \\\\ \\hline")
+
+        # Rows
+        for i, row_node in enumerate(nodes):
+            row = [row_node] + [matrix[i][j] for j in range(n)]
+            latex.append(" & ".join(row) + " \\\\ \\hline")
+
+        latex.append("\\end{tabular}")
+
+        return "\n".join(latex)

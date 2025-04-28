@@ -34,22 +34,18 @@ def check_smaller(p1: dict[str, int], p2: dict[str, int], strict=False):
 
 class CtrlResult:
     def __init__(
-        self, name: str, d_list: list[dict[str, int]], sort=True, only_minimal=True
+        self, name: str, d_list: list[dict[str, int]]
     ) -> None:
         self.name = name
         self.d_list = d_list
-        if only_minimal:
-            self.drop_nonminimal()
-        if sort:
-            self.sort_d_list()
-
+        
     def __repr__(self) -> str:
         return f"CtrlResult({self.name})"
 
     def __str__(self) -> str:
         return f"{self.d_list}"
 
-    def iter_ctrl_not_included_by(self, other: CtrlResult) -> bool:
+    def iter_ctrl_not_included_by(self, other: CtrlResult):
         return (
             x for x in self.d_list if not any(check_smaller(y, x) for y in other.d_list)
         )

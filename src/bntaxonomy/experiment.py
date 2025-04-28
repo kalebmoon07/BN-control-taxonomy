@@ -25,7 +25,7 @@ class ExperimentHandler:
         self.to_console = to_console
         self.to_file = to_file
         self.only_minimal = only_minimal
-        self.results = list()
+        self.results: list[CtrlResult] = list()
         os.makedirs(output_path, exist_ok=True)
 
         # Load setting
@@ -42,9 +42,9 @@ class ExperimentHandler:
         if use_propagated:
             from bntaxonomy.iface.mpbn import propagate_bn
 
-            self.bn = propagate_bn(self.org_bnet, self.inputs)
+            self.bn, self.bnet_fname = propagate_bn(self.org_bnet, self.inputs)
         else:
-            self.bn = self.org_bnet
+            self.bn, self.bnet_fname = self.org_bnet, self.bnet_fname
 
         self.pbn_primes = None
         self.sm_attrs, self.sm_primes = None, None
@@ -54,7 +54,8 @@ class ExperimentHandler:
         ctrl_result.drop_size_limit(self.max_size)
         if self.only_minimal:
             ctrl_result.drop_nonminimal()
-
+        ctrl_result.sort_d_list()
+        
         if self.to_console:
             print(f"{ctrl_result.name:<14}", ctrl_result)
         if self.to_file:
@@ -170,19 +171,25 @@ class ExperimentHandler:
     ### CABEAN
 
     def make_cabean(self):
-        from bntaxonomy.iface.cabean import make_cabean_iface
+        from bntaxonomy.iface.cabean import make_cabean_iface, CABEAN_OUT_MEMORY
 
+        # if experienced out of memory, skip retrying
+        if self.cabean == CABEAN_OUT_MEMORY:
+            return
         if self.cabean is None:
             self.cabean = make_cabean_iface(self.bn)
 
-    def ctrl_cabean_phenotype(self, method: str, _debug=False, **kwargs):
+    def ctrl_cabean_target_control(self, method: str, _debug=False, **kwargs):
         assert method in ["ITC", "TTC", "PTC"]
         self.make_cabean()
-        # TODO limit max_size
 
-        from bntaxonomy.iface.cabean import ctrl_target_control_iface
+        from bntaxonomy.iface.cabean import ctrl_target_control_iface, CABEAN_OUT_MEMORY
 
-        results = ctrl_target_control_iface(
-            self.cabean, self.target, method, _debug, **kwargs
-        )
+        if self.cabean == CABEAN_OUT_MEMORY:
+            # if experienced out of memory, return empty result
+            results = CtrlResult(f"CABEAN-{method}", [])
+        else:
+            results = ctrl_target_control_iface(
+                self.cabean, self.target, method, _debug, **kwargs
+            )
         return self.postprocess(results)

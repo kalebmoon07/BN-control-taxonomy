@@ -89,20 +89,21 @@ def cluster_cycles(input_dot: str, output_dot: str):
     new_graph = pydot.Dot(graph_type="digraph", strict=True)
     new_graph.set_graph_defaults(fontsize="10", fontname="Verdana", compound="true")
     new_graph.set_node_defaults(shape="record", fontsize="10", fontname="Verdana")
+    new_graph.set_graph_defaults(nodesep=0.3, ranksep=0.8)
 
     # Create clusters
     for cluster_name, nodes in clusters.items():
         subg = pydot.Subgraph(graph_name=cluster_name)
-        subg.set_label(f"Class {cluster_name.split('_')[-1]}")
+        subg.set_label(f"cluster_{cluster_name.split('_')[-1]}")
         subg.set_graph_defaults(
             style="dashed",
             color="black",
         )
-        # subg.set_style("dashed")
-        # subg.set_color("black")
+
         for node_name in nodes:
             node = graph.get_node(node_name)[0]
             subg.add_node(node)
+
         new_graph.add_subgraph(subg)
 
     # Add standalone nodes
@@ -123,6 +124,12 @@ def cluster_cycles(input_dot: str, output_dot: str):
         if dst in node_to_cluster:
             attributes["lhead"] = node_to_cluster[dst]
 
+        if (
+            (src in node_to_cluster)
+            & (dst in node_to_cluster)
+            & (node_to_cluster.get(src) == node_to_cluster.get(dst))
+        ):
+            continue
         new_edge = pydot.Edge(src, dst, **attributes)
         new_graph.add_edge(new_edge)
 
