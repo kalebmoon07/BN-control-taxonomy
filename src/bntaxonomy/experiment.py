@@ -12,6 +12,7 @@ class ExperimentHandler:
         name: str,
         input_path: str,
         output_path: str,
+        max_size: int,
         use_propagated: bool = True,
         to_console: bool = True,
         to_file: bool = True,
@@ -20,6 +21,7 @@ class ExperimentHandler:
         self.name = name
         self.input_path = input_path
         self.output_path = output_path
+        self.max_size = max_size
         self.to_console = to_console
         self.to_file = to_file
         self.only_minimal = only_minimal
@@ -49,37 +51,42 @@ class ExperimentHandler:
         self.cabean = None
 
     def postprocess(self, ctrl_result: CtrlResult):
+        ctrl_result.drop_size_limit(self.max_size)
+        if self.only_minimal:
+            ctrl_result.drop_nonminimal()
+
         if self.to_console:
             print(f"{ctrl_result.name:<14}", ctrl_result)
         if self.to_file:
             ctrl_result.dump(f"{self.output_path}/{ctrl_result.name}.json")
+
         self.results.append(ctrl_result)
         if os.path.exists("program_instance.asp"):
             os.remove("program_instance.asp")
         return ctrl_result
 
     ### ActoNet
-    def ctrl_actonet_fp(self, max_size: int, **kwargs):
+    def ctrl_actonet_fp(self, **kwargs):
         from bntaxonomy.iface.actonet import ctrl_actonet_fp_iface
 
-        results = ctrl_actonet_fp_iface(self.bn, self.target, max_size, **kwargs)
+        results = ctrl_actonet_fp_iface(self.bn, self.target, self.max_size, **kwargs)
         return self.postprocess(results)
 
     ### BoNesis
-    def ctrl_bonesis_mts(self, max_size: int, **kwargs):
+    def ctrl_bonesis_mts(self, **kwargs):
         from bntaxonomy.iface.bonesis import ctrl_bonesis_mts_iface
 
-        results = ctrl_bonesis_mts_iface(self.bn, self.target, max_size, **kwargs)
+        results = ctrl_bonesis_mts_iface(self.bn, self.target, self.max_size, **kwargs)
         return self.postprocess(results)
 
     # TODO: option for fixed point control by BoNesis
 
     ### Caspo
-    def ctrl_caspo_vpts(self, max_size: int, **kwargs):
+    def ctrl_caspo_vpts(self, **kwargs):
         from bntaxonomy.iface.caspo import ctrl_caspo_vpts_iface
 
         return self.postprocess(
-            ctrl_caspo_vpts_iface(self.bn, self.target, max_size, **kwargs)
+            ctrl_caspo_vpts_iface(self.bn, self.target, self.max_size, **kwargs)
         )
 
     ### PyBoolNet
@@ -89,25 +96,30 @@ class ExperimentHandler:
         if self.pbn_primes is None:
             self.pbn_primes = make_pbn_primes_iface(self.bnet_fname)
 
-    def ctrl_pyboolnet_model_checking(self, max_size: int, update: str, **kwargs):
+    def ctrl_pyboolnet_model_checking(self, update: str, **kwargs):
         from bntaxonomy.iface.pbn import ctrl_pbn_attr_iface
 
         assert update in ["synchronous", "asynchronous"]
 
         self.make_pbn_primes()
         results = ctrl_pbn_attr_iface(
-            self.pbn_primes, self.inputs, self.target, update, max_size, **kwargs
+            self.pbn_primes, self.inputs, self.target, update, self.max_size, **kwargs
         )
         return self.postprocess(results)
 
-    def ctrl_pyboolnet_heuristics(self, max_size: int, control_type: str, **kwargs):
+    def ctrl_pyboolnet_heuristics(self, control_type: str, **kwargs):
         from bntaxonomy.iface.pbn import ctrl_pbn_heuristics_iface
 
         assert control_type in ["percolation", "trap_spaces"]
 
         self.make_pbn_primes()
         results = ctrl_pbn_heuristics_iface(
-            self.pbn_primes, self.inputs, self.target, control_type, max_size, **kwargs
+            self.pbn_primes,
+            self.inputs,
+            self.target,
+            control_type,
+            self.max_size,
+            **kwargs,
         )
         return self.postprocess(results)
 
@@ -126,18 +138,18 @@ class ExperimentHandler:
         if self.sm_attrs is None:
             self.sm_attrs = make_sm_attrs_iface(self.sm_primes)
 
-    def ctrl_pystablemotif_brute_force(self, max_size: int, **kwargs):
+    def ctrl_pystablemotif_brute_force(self, **kwargs):
         from bntaxonomy.iface.stablemotif import ctrl_sm_brute_force_iface
 
         self.make_sm_primes()
 
         results = ctrl_sm_brute_force_iface(
-            self.sm_primes, self.target, max_size, **kwargs
+            self.sm_primes, self.target, self.max_size, **kwargs
         )
         return self.postprocess(results)
 
     def ctrl_pystablemotif_trapspace(
-        self, max_size: int, target_method: str, driver_method: str, **kwargs
+        self, target_method: str, driver_method: str, **kwargs
     ):
         from bntaxonomy.iface.stablemotif import ctrl_sm_trapspace_iface
 
@@ -146,7 +158,12 @@ class ExperimentHandler:
         self.make_sm_attrs()
 
         results = ctrl_sm_trapspace_iface(
-            self.sm_attrs, self.target, target_method, driver_method, max_size, **kwargs
+            self.sm_attrs,
+            self.target,
+            target_method,
+            driver_method,
+            self.max_size,
+            **kwargs,
         )
         return self.postprocess(results)
 
@@ -158,7 +175,7 @@ class ExperimentHandler:
         if self.cabean is None:
             self.cabean = make_cabean_iface(self.bn)
 
-    def ctrl_cabean_phenotype(self, max_size: int, method: str, _debug=False, **kwargs):
+    def ctrl_cabean_phenotype(self, method: str, _debug=False, **kwargs):
         assert method in ["ITC", "TTC", "PTC"]
         self.make_cabean()
         # TODO limit max_size

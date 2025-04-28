@@ -8,6 +8,7 @@ import sys
 
 from algorecell_types import ReprogrammingStrategies
 
+
 @contextlib.contextmanager
 def suppress_console_output():
     with open(os.devnull, "w") as devnull:
@@ -22,6 +23,7 @@ def suppress_console_output():
             # restore
             os.dup2(orig_stdout_fno, 1)
             os.dup2(orig_stderr_fno, 2)
+
 
 def check_smaller(p1: dict[str, int], p2: dict[str, int], strict=False):
     is_small = all(p2.get(k, -1) == v for k, v in p1.items())
@@ -72,14 +74,17 @@ class CtrlResult:
         d_list.sort(key=lambda x: (len(x), sorted(x.items())))
         self.d_list = d_list
 
-    # def drop_duplicates(self):
-    #     self.d_list = list({tuple(d.items()) for d in self.d_list})
-    #     self.d_list = [dict(x) for x in self.d_list]
-
     def drop_nonminimal(self):
         d_list = list()
         for ctrl in self.d_list:
             if not any(True for other in d_list if check_smaller(other, ctrl)):
+                d_list.append(ctrl)
+        self.d_list = d_list
+
+    def drop_size_limit(self, size_limit: int):
+        d_list = list()
+        for ctrl in self.d_list:
+            if len(ctrl) <= size_limit:
                 d_list.append(ctrl)
         self.d_list = d_list
 

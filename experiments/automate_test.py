@@ -1,6 +1,7 @@
 import os, sys
 from bntaxonomy.experiment import ExperimentHandler
 from bntaxonomy.hierarchy import SingleInputSummary
+
 cwd = os.path.dirname(os.path.abspath(__file__))
 
 insts_practical = f"{cwd}/instances/practical"
@@ -28,22 +29,28 @@ if __name__ == "__main__":
         os.makedirs(opath, exist_ok=True)
 
         exp = ExperimentHandler(
-            inst, fpath, opath, to_console=False, to_file=True, only_minimal=True
+            inst,
+            fpath,
+            opath,
+            max_size,
+            to_console=False,
+            to_file=True,
+            only_minimal=True,
         )
 
-        exp.ctrl_actonet_fp(max_size)
-        exp.ctrl_bonesis_mts(max_size)
-        exp.ctrl_caspo_vpts(max_size)
+        exp.ctrl_actonet_fp()
+        exp.ctrl_bonesis_mts()
+        exp.ctrl_caspo_vpts()
         for update in ["synchronous", "asynchronous"]:
-            exp.ctrl_pyboolnet_model_checking(max_size, update)
+            exp.ctrl_pyboolnet_model_checking(update)
         for control_type in ["percolation", "trap_spaces"]:
-            exp.ctrl_pyboolnet_heuristics(max_size, control_type)
-        exp.ctrl_pystablemotif_brute_force(max_size)
+            exp.ctrl_pyboolnet_heuristics(control_type)
+        exp.ctrl_pystablemotif_brute_force()
         for target_method in ["merge"]:  # ["merge", "history"]:
             for driver_method in ["minimal", "internal"]:
-                exp.ctrl_pystablemotif_trapspace(max_size, target_method, driver_method)
+                exp.ctrl_pystablemotif_trapspace(target_method, driver_method)
         for method in ["ITC", "TTC", "PTC"]:
-            exp.ctrl_cabean_phenotype(max_size, method)
+            exp.ctrl_cabean_phenotype(method)
 
         exp_run = SingleInputSummary.from_folder(opath, inst)
         exp_run.save(f"{opath}/_graph")

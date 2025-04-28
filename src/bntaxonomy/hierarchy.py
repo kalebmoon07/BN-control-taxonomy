@@ -1,11 +1,12 @@
-
 import json
 import os
 import networkx as nx
 import subprocess
 from itertools import combinations, product
+
 # from bntaxonomy.experiment import ExperimentRun
 from bntaxonomy.utils import CtrlResult, suppress_console_output
+
 
 class SingleInputSummary:
     def __init__(self, results: list[CtrlResult], name: str = "SingleInputSummary"):
@@ -35,8 +36,12 @@ class SingleInputSummary:
         if not name:
             name = opath.split("/")[-1]
         return SingleInputSummary(sol_list, name)
+
+
 class MultiInputSummary:
-    def __init__(self, exp_list: list[SingleInputSummary], name: str = "MultiInputSummary"):
+    def __init__(
+        self, exp_list: list[SingleInputSummary], name: str = "MultiInputSummary"
+    ):
         self.name = name
         self.exp_list = exp_list
         self.G, self.ce_G = nx.DiGraph(), nx.DiGraph()
