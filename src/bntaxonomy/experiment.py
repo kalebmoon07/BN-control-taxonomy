@@ -3,40 +3,7 @@ import json, os
 
 from colomoto.minibn import BooleanNetwork
 
-import subprocess
-import networkx as nx
-from itertools import combinations
-from bntaxonomy.utils import CtrlResult, suppress_console_output
-
-
-class ExperimentRun:
-    def __init__(self, results: list[CtrlResult], name: str = "Hierarchy"):
-        self.name = name
-        self.results = results
-        self.G = nx.DiGraph()
-        for r1, r2 in combinations(self.results, 2):
-            if r1.is_stronger_than(r2):
-                self.G.add_edge(r2.name, r1.name)
-            if r2.is_stronger_than(r1):
-                self.G.add_edge(r1.name, r2.name)
-
-    def save(self, fname: str):
-        with suppress_console_output():
-            nx.nx_pydot.write_dot(self.G, f"{fname}.dot")
-            tred_cmd = f"tred {fname}.dot | dot -T png > {fname}.png"
-            process = subprocess.Popen(tred_cmd, shell=True)
-            process.wait()
-
-    @staticmethod
-    def from_folder(opath: str, name: str = ""):
-        files = [fname for fname in os.listdir(opath) if fname.endswith(".json")]
-        sol_list = [
-            CtrlResult(fname[:-5], json.load(open(f"{opath}/{fname}")))
-            for fname in files
-        ]
-        if not name:
-            name = opath.split("/")[-1]
-        return ExperimentRun(sol_list, name)
+from bntaxonomy.utils import CtrlResult
 
 
 class ExperimentHandler:
@@ -81,33 +48,6 @@ class ExperimentHandler:
         self.sm_attrs, self.sm_primes = None, None
         self.cabean = None
 
-    # Preprocessing
-
-    def make_pbn_primes(self):
-        from bntaxonomy.iface.pbn import make_pbn_primes_iface
-
-        if self.pbn_primes is None:
-            self.pbn_primes = make_pbn_primes_iface(self.bnet_fname)
-
-    def make_sm_primes(self):
-        from bntaxonomy.iface.stablemotif import make_sm_primes_iface
-
-        if self.sm_primes is None:
-            self.sm_primes = make_sm_primes_iface(self.bnet_fname)
-
-    def make_sm_attrs(self):
-        from bntaxonomy.iface.stablemotif import make_sm_attrs_iface
-
-        self.make_sm_primes()
-        if self.sm_attrs is None:
-            self.sm_attrs = make_sm_attrs_iface(self.sm_primes)
-
-    def make_cabean(self):
-        from bntaxonomy.iface.cabean import make_cabean_iface
-
-        if self.cabean is None:
-            self.cabean = make_cabean_iface(self.bn)
-
     def postprocess(self, ctrl_result: CtrlResult):
         if self.to_console:
             print(f"{ctrl_result.name:<14}", ctrl_result)
@@ -143,6 +83,12 @@ class ExperimentHandler:
         )
 
     ### PyBoolNet
+    def make_pbn_primes(self):
+        from bntaxonomy.iface.pbn import make_pbn_primes_iface
+
+        if self.pbn_primes is None:
+            self.pbn_primes = make_pbn_primes_iface(self.bnet_fname)
+
     def ctrl_pyboolnet_model_checking(self, max_size: int, update: str, **kwargs):
         from bntaxonomy.iface.pbn import ctrl_pbn_attr_iface
 
@@ -166,6 +112,19 @@ class ExperimentHandler:
         return self.postprocess(results)
 
     ### pystablemotifs
+
+    def make_sm_primes(self):
+        from bntaxonomy.iface.stablemotif import make_sm_primes_iface
+
+        if self.sm_primes is None:
+            self.sm_primes = make_sm_primes_iface(self.bnet_fname)
+
+    def make_sm_attrs(self):
+        from bntaxonomy.iface.stablemotif import make_sm_attrs_iface
+
+        self.make_sm_primes()
+        if self.sm_attrs is None:
+            self.sm_attrs = make_sm_attrs_iface(self.sm_primes)
 
     def ctrl_pystablemotif_brute_force(self, max_size: int, **kwargs):
         from bntaxonomy.iface.stablemotif import ctrl_sm_brute_force_iface
@@ -192,6 +151,12 @@ class ExperimentHandler:
         return self.postprocess(results)
 
     ### CABEAN
+
+    def make_cabean(self):
+        from bntaxonomy.iface.cabean import make_cabean_iface
+
+        if self.cabean is None:
+            self.cabean = make_cabean_iface(self.bn)
 
     def ctrl_cabean_phenotype(self, max_size: int, method: str, _debug=False, **kwargs):
         assert method in ["ITC", "TTC", "PTC"]

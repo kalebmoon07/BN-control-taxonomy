@@ -1,6 +1,6 @@
 import os, sys
-from bntaxonomy.experiment import ExperimentHandler, ExperimentRun
-
+from bntaxonomy.experiment import ExperimentHandler
+from bntaxonomy.hierarchy import SingleInputSummary
 cwd = os.path.dirname(os.path.abspath(__file__))
 
 insts_practical = f"{cwd}/instances/practical"
@@ -45,5 +45,5 @@ if __name__ == "__main__":
         for method in ["ITC", "TTC", "PTC"]:
             exp.ctrl_cabean_phenotype(max_size, method)
 
-        exp_run = ExperimentRun.from_folder(opath, inst)
+        exp_run = SingleInputSummary.from_folder(opath, inst)
         exp_run.save(f"{opath}/_graph")
