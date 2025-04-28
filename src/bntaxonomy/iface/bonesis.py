@@ -1,7 +1,7 @@
 import bonesis
 from colomoto.minibn import BooleanNetwork
 
-from bntaxonomy.utils import CtrlResult, suppress_console_output
+from bntaxonomy.utils.control import CtrlResult, suppress_console_output
 
 
 def ctrl_bonesis_mts_iface(

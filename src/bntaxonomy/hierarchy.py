@@ -1,11 +1,11 @@
 import json
 import os
 import networkx as nx
-import subprocess
 from itertools import combinations, product
 
-# from bntaxonomy.experiment import ExperimentRun
-from bntaxonomy.utils import CtrlResult, suppress_console_output
+
+from bntaxonomy.utils.control import CtrlResult, suppress_console_output
+import bntaxonomy.utils.graph as graph_utils
 
 
 class SingleInputSummary:
@@ -21,10 +21,14 @@ class SingleInputSummary:
 
     def save(self, fname: str):
         with suppress_console_output():
-            nx.nx_pydot.write_dot(self.G, f"{fname}.dot")
-            tred_cmd = f"tred {fname}.dot | dot -T png > {fname}.png"
-            process = subprocess.Popen(tred_cmd, shell=True)
-            process.wait()
+            dot_fname = f"{fname}.dot"
+            tred_fname = f"{fname}_tred.dot"
+            tred_scc_fname = f"{fname}_tred_scc.dot"
+            graph_utils.write_dot(self.G, dot_fname)
+            graph_utils.write_transitive_reduction(dot_fname, tred_fname)
+            graph_utils.export_dot_png(tred_fname, f"{fname}.png")
+            graph_utils.cluster_cycles(tred_fname, f"{fname}_tred_scc.dot")
+            graph_utils.export_dot_png(f"{fname}_tred_scc.dot", f"{fname}_tred_scc.png")
 
     @staticmethod
     def from_folder(opath: str, name: str = ""):
@@ -73,7 +77,10 @@ class MultiInputSummary:
 
     def save(self, fname: str):
         with suppress_console_output():
-            nx.nx_pydot.write_dot(self.G, f"{fname}.dot")
-            tred_cmd = f"tred {fname}.dot | dot -T png > {fname}.png"
-            process = subprocess.Popen(tred_cmd, shell=True)
-            process.wait()
+            dot_fname = f"{fname}.dot"
+            tred_fname = f"{fname}_tred.dot"
+            graph_utils.write_dot(self.G, dot_fname)
+            graph_utils.write_transitive_reduction(dot_fname, tred_fname)
+            graph_utils.export_dot_png(tred_fname, f"{fname}.png")
+            graph_utils.cluster_cycles(tred_fname, f"{fname}_tred_scc.dot")
+            graph_utils.export_dot_png(f"{fname}_tred_scc.dot", f"{fname}_tred_scc.png")

@@ -3,7 +3,7 @@ import json, os
 
 from colomoto.minibn import BooleanNetwork
 
-from bntaxonomy.utils import CtrlResult
+from bntaxonomy.utils.control import CtrlResult
 
 
 class ExperimentHandler:

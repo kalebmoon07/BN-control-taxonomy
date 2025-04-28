@@ -2,7 +2,7 @@ import functools
 from actonet import ActoNet
 from colomoto.minibn import BooleanNetwork
 
-from bntaxonomy.utils import CtrlResult, suppress_console_output, refine_pert
+from bntaxonomy.utils.control import CtrlResult, suppress_console_output, refine_pert
 
 
 class myActoNet(ActoNet):

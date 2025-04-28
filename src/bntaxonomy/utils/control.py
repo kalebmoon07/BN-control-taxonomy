@@ -51,13 +51,7 @@ class CtrlResult:
 
     def iter_ctrl_not_included_by(self, other: CtrlResult) -> bool:
         return (
-            x
-            for x in self.d_list
-            if not any(
-                # all(x.get(yk, -1) == yv for yk, yv in y.items()) for y in other.d_list
-                check_smaller(y, x)
-                for y in other.d_list
-            )
+            x for x in self.d_list if not any(check_smaller(y, x) for y in other.d_list)
         )
 
     def is_stronger_than(self, other: CtrlResult) -> bool:

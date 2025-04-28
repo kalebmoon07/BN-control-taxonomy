@@ -1,7 +1,7 @@
 from colomoto.minibn import BooleanNetwork
 import caspo_control
 
-from bntaxonomy.utils import CtrlResult, refine_pert, suppress_console_output
+from bntaxonomy.utils.control import CtrlResult, refine_pert, suppress_console_output
 
 
 def ctrl_caspo_vpts_iface(

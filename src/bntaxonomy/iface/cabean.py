@@ -1,7 +1,7 @@
 import os
 import subprocess
 import tempfile
-from bntaxonomy.utils import CtrlResult
+from bntaxonomy.utils.control import CtrlResult
 from colomoto.minibn import BooleanNetwork
 import cabean
 from cabean import CabeanInstance

@@ -4,7 +4,7 @@ from bntaxonomy.dep.control_strategies import run_control_problem
 from bntaxonomy.dep.control_strategies_MC import (
     compute_control_strategies_with_model_checking,
 )
-from bntaxonomy.utils import CtrlResult, suppress_console_output
+from bntaxonomy.utils.control import CtrlResult, suppress_console_output
 
 
 def make_pbn_primes_iface(bnet_fname: str):

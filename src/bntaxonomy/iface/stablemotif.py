@@ -1,6 +1,6 @@
 import pystablemotifs as sm
 
-from bntaxonomy.utils import CtrlResult
+from bntaxonomy.utils.control import CtrlResult
 
 
 # preprocessing
