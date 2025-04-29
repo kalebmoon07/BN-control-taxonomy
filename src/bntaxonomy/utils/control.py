@@ -33,12 +33,10 @@ def check_smaller(p1: dict[str, int], p2: dict[str, int], strict=False):
 
 
 class CtrlResult:
-    def __init__(
-        self, name: str, d_list: list[dict[str, int]]
-    ) -> None:
+    def __init__(self, name: str, d_list: list[dict[str, int]]) -> None:
         self.name = name
         self.d_list = d_list
-        
+
     def __repr__(self) -> str:
         return f"CtrlResult({self.name})"
 

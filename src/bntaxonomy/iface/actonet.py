@@ -3,6 +3,7 @@ from actonet import ActoNet
 from colomoto.minibn import BooleanNetwork
 
 from bntaxonomy.utils.control import CtrlResult, suppress_console_output, refine_pert
+from bntaxonomy.utils.log import time_check
 
 
 class myActoNet(ActoNet):
@@ -12,6 +13,7 @@ class myActoNet(ActoNet):
         self.controls = functools.partial(self.controls, existential=False)
 
 
+@time_check
 def ctrl_actonet_fp_iface(
     bn: BooleanNetwork, target: dict[str, int], max_size: int, **kwargs
 ):

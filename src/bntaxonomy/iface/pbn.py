@@ -5,12 +5,18 @@ from bntaxonomy.dep.control_strategies_MC import (
     compute_control_strategies_with_model_checking,
 )
 from bntaxonomy.utils.control import CtrlResult, suppress_console_output
+from bntaxonomy.utils.log import time_check
+
+PRIME_JSON_FILE = "pyboolnet_primes.json"
 
 
+@time_check
 def make_pbn_primes_iface(bnet_fname: str):
+    print("Generating primes from pyboolnet")
     return bnet2primes(bnet_fname)
 
 
+@time_check
 def ctrl_pbn_attr_iface(
     pbn_primes: dict,
     inputs: dict[str, int],
@@ -31,6 +37,7 @@ def ctrl_pbn_attr_iface(
     return CtrlResult(f"PBN-mc-{update[:-7]}", results)
 
 
+@time_check
 def ctrl_pbn_heuristics_iface(
     pbn_primes: dict,
     inputs: dict[str, int],

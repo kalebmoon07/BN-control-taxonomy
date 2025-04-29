@@ -23,16 +23,15 @@ class SingleInputSummary:
         with suppress_console_output():
             dot_fname = f"{fname}.dot"
             tred_fname = f"{fname}_tred.dot"
-            tred_scc_fname = f"{fname}_tred_scc.dot"
             graph_utils.write_dot(self.G, dot_fname)
             graph_utils.write_transitive_reduction(dot_fname, tred_fname)
             graph_utils.export_dot_png(tred_fname, f"{fname}.png")
-            graph_utils.cluster_cycles(tred_fname, f"{fname}_tred_scc.dot")
-            graph_utils.export_dot_png(f"{fname}_tred_scc.dot", f"{fname}_tred_scc.png")
+            graph_utils.cluster_cycles(tred_fname, tred_fname)
+            graph_utils.export_dot_png(tred_fname, f"{fname}_tred.png")
 
     @staticmethod
     def from_folder(opath: str, name: str = ""):
-        files = [fname for fname in os.listdir(opath) if fname.endswith(".json")]
+        files = [fname for fname in os.listdir(opath) if fname.endswith(".json") and not fname.endswith("_full.json")]
         sol_list = [
             CtrlResult(fname[:-5], json.load(open(f"{opath}/{fname}")))
             for fname in files
@@ -82,8 +81,8 @@ class MultiInputSummary:
             graph_utils.write_dot(self.G, dot_fname)
             graph_utils.write_transitive_reduction(dot_fname, tred_fname)
             graph_utils.export_dot_png(tred_fname, f"{fname}.png")
-            graph_utils.cluster_cycles(tred_fname, f"{fname}_tred_scc.dot")
-            graph_utils.export_dot_png(f"{fname}_tred_scc.dot", f"{fname}_tred_scc.png")
+            graph_utils.cluster_cycles(tred_fname, tred_fname)
+            graph_utils.export_dot_png(tred_fname, f"{fname}_tred.png")
 
     def get_exp_names(self):
         return [exp.name for exp in self.exp_list]

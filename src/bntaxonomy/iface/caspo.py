@@ -2,8 +2,10 @@ from colomoto.minibn import BooleanNetwork
 import caspo_control
 
 from bntaxonomy.utils.control import CtrlResult, refine_pert, suppress_console_output
+from bntaxonomy.utils.log import time_check
 
 
+@time_check
 def ctrl_caspo_vpts_iface(
     bn: BooleanNetwork, target: dict[str, int], max_size: int, **kwargs
 ):

@@ -4,7 +4,8 @@ import json, os
 from colomoto.minibn import BooleanNetwork
 
 from bntaxonomy.utils.control import CtrlResult
-
+from bntaxonomy.utils.log import main_logger
+import bntaxonomy.utils.log as log_utils
 
 class ExperimentHandler:
     def __init__(
@@ -17,6 +18,8 @@ class ExperimentHandler:
         to_console: bool = True,
         to_file: bool = True,
         only_minimal: bool = True,
+        dump_full: bool = True,
+        load_precompute: bool = False,
     ):
         self.name = name
         self.input_path = input_path
@@ -25,9 +28,12 @@ class ExperimentHandler:
         self.to_console = to_console
         self.to_file = to_file
         self.only_minimal = only_minimal
+        self.dump_full = dump_full
+        self.load_precompute = load_precompute
         self.results: list[CtrlResult] = list()
         os.makedirs(output_path, exist_ok=True)
-
+        log_utils.configure_logging(__name__)
+        
         # Load setting
         with open(f"{input_path}/setting.json") as _f:
             setting = json.load(_f)
@@ -46,18 +52,25 @@ class ExperimentHandler:
         else:
             self.bn, self.bnet_fname = self.org_bnet, self.bnet_fname
 
-        self.pbn_primes = None
-        self.sm_attrs, self.sm_primes = None, None
+        self.primes = None
+        self.sm_attrs = None
+        self.primes = None
         self.cabean = None
 
     def postprocess(self, ctrl_result: CtrlResult):
+        ctrl_result.sort_d_list()
+        if self.dump_full:
+            if self.to_console:
+                main_logger.info(f"{ctrl_result.name:<14}: {ctrl_result}")
+            ctrl_result.dump(f"{self.output_path}/{ctrl_result.name}_full.json")
+
+        # filtering
         ctrl_result.drop_size_limit(self.max_size)
         if self.only_minimal:
             ctrl_result.drop_nonminimal()
-        ctrl_result.sort_d_list()
-        
+
         if self.to_console:
-            print(f"{ctrl_result.name:<14}", ctrl_result)
+            main_logger.info(f"{ctrl_result.name:<14}: {ctrl_result}")
         if self.to_file:
             ctrl_result.dump(f"{self.output_path}/{ctrl_result.name}.json")
 
@@ -91,20 +104,31 @@ class ExperimentHandler:
         )
 
     ### PyBoolNet
-    def make_pbn_primes(self):
-        from bntaxonomy.iface.pbn import make_pbn_primes_iface
+    def make_primes(self):
+        from bntaxonomy.iface.pbn import make_pbn_primes_iface, PRIME_JSON_FILE
 
-        if self.pbn_primes is None:
-            self.pbn_primes = make_pbn_primes_iface(self.bnet_fname)
+        if self.primes is None:
+            if self.load_precompute:
+                try:
+                    with open(f"{self.input_path}/{PRIME_JSON_FILE}") as _f:
+                        self.primes = json.load(_f)
+                    main_logger.info("Loaded precomputed pyboolnet primes successfully")
+                except:
+                    main_logger.info("Loading precomputed pyboolnet primes fails")
+                    self.primes = make_pbn_primes_iface(self.bnet_fname)
+            else:
+                self.primes = make_pbn_primes_iface(self.bnet_fname)
+            with open(f"{self.input_path}/{PRIME_JSON_FILE}", "w") as _f:
+                json.dump(self.primes, _f)
 
     def ctrl_pyboolnet_model_checking(self, update: str, **kwargs):
         from bntaxonomy.iface.pbn import ctrl_pbn_attr_iface
 
         assert update in ["synchronous", "asynchronous"]
 
-        self.make_pbn_primes()
+        self.make_primes()
         results = ctrl_pbn_attr_iface(
-            self.pbn_primes, self.inputs, self.target, update, self.max_size, **kwargs
+            self.primes, self.inputs, self.target, update, self.max_size, **kwargs
         )
         return self.postprocess(results)
 
@@ -113,9 +137,9 @@ class ExperimentHandler:
 
         assert control_type in ["percolation", "trap_spaces"]
 
-        self.make_pbn_primes()
+        self.make_primes()
         results = ctrl_pbn_heuristics_iface(
-            self.pbn_primes,
+            self.primes,
             self.inputs,
             self.target,
             control_type,
@@ -126,26 +150,20 @@ class ExperimentHandler:
 
     ### pystablemotifs
 
-    def make_sm_primes(self):
-        from bntaxonomy.iface.stablemotif import make_sm_primes_iface
-
-        if self.sm_primes is None:
-            self.sm_primes = make_sm_primes_iface(self.bnet_fname)
-
     def make_sm_attrs(self):
         from bntaxonomy.iface.stablemotif import make_sm_attrs_iface
 
-        self.make_sm_primes()
+        self.make_primes()
         if self.sm_attrs is None:
-            self.sm_attrs = make_sm_attrs_iface(self.sm_primes)
+            self.sm_attrs = make_sm_attrs_iface(self.primes)
 
     def ctrl_pystablemotif_brute_force(self, **kwargs):
         from bntaxonomy.iface.stablemotif import ctrl_sm_brute_force_iface
 
-        self.make_sm_primes()
+        self.make_primes()
 
         results = ctrl_sm_brute_force_iface(
-            self.sm_primes, self.target, self.max_size, **kwargs
+            self.primes, self.target, self.max_size, **kwargs
         )
         return self.postprocess(results)
 
@@ -169,15 +187,30 @@ class ExperimentHandler:
         return self.postprocess(results)
 
     ### CABEAN
-
     def make_cabean(self):
-        from bntaxonomy.iface.cabean import make_cabean_iface, CABEAN_OUT_MEMORY
+        from bntaxonomy.iface.cabean import (
+            make_cabean_iface,
+            CABEAN_OUT_MEMORY,
+            ATTR_JSON_FILE,
+        )
 
         # if experienced out of memory, skip retrying
         if self.cabean == CABEAN_OUT_MEMORY:
             return
         if self.cabean is None:
             self.cabean = make_cabean_iface(self.bn)
+            if self.load_precompute:
+                try:
+                    with open(f"{self.input_path}/{ATTR_JSON_FILE}") as _f:
+                        self.cabean.load_precomputed_attr(json.load(_f))
+                    main_logger.info("Loaded precomputed cabean successfully")
+                except:
+                    main_logger.info("Loading precomputed cabean fails")
+                    self.cabean.compute_attractors()
+            else:
+                self.cabean.compute_attractors()
+            with open(f"{self.input_path}/{ATTR_JSON_FILE}", "w") as _f:
+                json.dump(self.cabean.attractors, _f)
 
     def ctrl_cabean_target_control(self, method: str, _debug=False, **kwargs):
         assert method in ["ITC", "TTC", "PTC"]

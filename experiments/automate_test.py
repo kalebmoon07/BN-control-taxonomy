@@ -36,6 +36,7 @@ if __name__ == "__main__":
             to_console=True,
             to_file=True,
             only_minimal=True,
+            load_precompute=True,
         )
 
         exp.ctrl_actonet_fp()

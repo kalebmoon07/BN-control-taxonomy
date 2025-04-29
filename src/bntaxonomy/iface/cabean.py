@@ -4,18 +4,41 @@ import tempfile
 from bntaxonomy.utils.control import CtrlResult
 from colomoto.minibn import BooleanNetwork
 import cabean
-from cabean import CabeanInstance
+from cabean import CabeanInstance, CabeanIface
 from cabean.iface import CabeanResult
+from colomoto.types import PartialState
+
+from bntaxonomy.utils.log import time_check
 
 cabean_path = f"{os.path.dirname(os.path.abspath(__file__))}/../dep/cabean_2.0.0"
 
-CABEAN_OUT_MEMORY = False
+CABEAN_OUT_MEMORY = "OUT_OF_MEMORY"
+ATTR_JSON_FILE = "cabean_attractors.json"
 
 
+class CabeanInstancePrecomputed(CabeanInstance):
+    def __init__(self, bn: BooleanNetwork, *spec, **kwspec):
+        bn = BooleanNetwork.auto_cast(bn)
+        init = PartialState(*spec, **kwspec)
+        assert set(bn.inputs()).issuperset(
+            init.keys()
+        ), "specified inputs are not input nodes of the Boolean network"
+        self.iface = CabeanIface(bn, init=init)
+        # self.attractors = self.iface.attractors() # skip this line for the precomputed
+
+    @time_check
+    def compute_attractors(self):
+        self.attractors = self.iface.attractors()
+
+    def load_precomputed_attr(self, attrs):
+        self.attractors = attrs
+
+
+@time_check
 def make_cabean_iface(bn: BooleanNetwork):
     print("Loading cabean and computing attractors")
     try:
-        return cabean.load(bn)
+        return CabeanInstancePrecomputed(bn)
     except Exception as e:
         print(f"Error loading cabean: {e}")
         return CABEAN_OUT_MEMORY
@@ -35,6 +58,7 @@ def make_cabean_tempfiles(cabean_obj: CabeanInstance, target: dict[str, int]):
     return cabean_target_fname, cabean_bn_fname
 
 
+@time_check
 def ctrl_target_control_iface(
     cabean_obj: CabeanInstance,
     target: dict[str, int],
