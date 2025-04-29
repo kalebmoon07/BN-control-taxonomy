@@ -1,6 +1,7 @@
 import os, sys
 from bntaxonomy.experiment import ExperimentHandler
 from bntaxonomy.hierarchy import SingleInputSummary
+import bntaxonomy.utils.log as log_utils
 
 cwd = os.path.dirname(os.path.abspath(__file__))
 
@@ -17,13 +18,14 @@ def get_insts(inst_groups: list[str]):
 
 
 if __name__ == "__main__":
+    log_utils.configure_logging(os.path.basename(__file__))
 
     max_size = 2
     inst_groups = [insts_ce, insts_tonello, insts_practical]
     # inst_groups = [insts_ce]
 
     for inst_selected, inst in get_insts(inst_groups):
-        print(f"\tRunning {inst}")
+        log_utils.main_logger.info(f"\tRunning {inst}")
         fpath = f"{inst_selected}/{inst}"
         opath = f"{inst_selected.replace('instances','results')}/{inst}"
         os.makedirs(opath, exist_ok=True)

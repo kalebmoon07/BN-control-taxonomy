@@ -7,6 +7,7 @@ from bntaxonomy.utils.control import CtrlResult
 from bntaxonomy.utils.log import main_logger
 import bntaxonomy.utils.log as log_utils
 
+
 class ExperimentHandler:
     def __init__(
         self,
@@ -32,8 +33,7 @@ class ExperimentHandler:
         self.load_precompute = load_precompute
         self.results: list[CtrlResult] = list()
         os.makedirs(output_path, exist_ok=True)
-        log_utils.configure_logging(__name__)
-        
+
         # Load setting
         with open(f"{input_path}/setting.json") as _f:
             setting = json.load(_f)
@@ -93,7 +93,11 @@ class ExperimentHandler:
         results = ctrl_bonesis_mts_iface(self.bn, self.target, self.max_size, **kwargs)
         return self.postprocess(results)
 
-    # TODO: option for fixed point control by BoNesis
+    def ctrl_bonesis_fp(self, **kwargs):
+        from bntaxonomy.iface.bonesis import ctrl_bonesis_fp_iface
+
+        results = ctrl_bonesis_fp_iface(self.bn, self.target, self.max_size, **kwargs)
+        return self.postprocess(results)
 
     ### Caspo
     def ctrl_caspo_vpts(self, **kwargs):
@@ -198,19 +202,24 @@ class ExperimentHandler:
         if self.cabean == CABEAN_OUT_MEMORY:
             return
         if self.cabean is None:
-            self.cabean = make_cabean_iface(self.bn)
-            if self.load_precompute:
-                try:
-                    with open(f"{self.input_path}/{ATTR_JSON_FILE}") as _f:
-                        self.cabean.load_precomputed_attr(json.load(_f))
-                    main_logger.info("Loaded precomputed cabean successfully")
-                except:
-                    main_logger.info("Loading precomputed cabean fails")
+            try:
+                self.cabean = make_cabean_iface(self.bn)
+                if self.load_precompute:
+                    try:
+                        with open(f"{self.input_path}/{ATTR_JSON_FILE}") as _f:
+                            self.cabean.load_precomputed_attr(json.load(_f))
+                        main_logger.info("Loaded precomputed cabean successfully")
+                    except:
+                        main_logger.info("Loading precomputed cabean fails")
+                        self.cabean.compute_attractors()
+                else:
                     self.cabean.compute_attractors()
-            else:
-                self.cabean.compute_attractors()
-            with open(f"{self.input_path}/{ATTR_JSON_FILE}", "w") as _f:
-                json.dump(self.cabean.attractors, _f)
+                with open(f"{self.input_path}/{ATTR_JSON_FILE}", "w") as _f:
+                    json.dump(self.cabean.attractors, _f)
+            except Exception as e:
+                main_logger.info(f"Error loading cabean: {e}")
+                self.cabean = CABEAN_OUT_MEMORY
+                return
 
     def ctrl_cabean_target_control(self, method: str, _debug=False, **kwargs):
         assert method in ["ITC", "TTC", "PTC"]
