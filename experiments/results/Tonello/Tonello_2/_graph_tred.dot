@@ -1,0 +1,48 @@
+strict digraph G {
+graph [fontsize=10, fontname=Verdana, compound=true];
+node [shape=record, fontsize=10, fontname=Verdana];
+graph [nodesep=0.3, ranksep=0.8];
+subgraph cluster_0 {
+label="cluster_0";
+graph [style=dashed, color=black];
+ActoNet_full;
+ActoNet;
+"PBN-mc-sync";
+"PBN-mc-sync_full";
+}
+
+subgraph cluster_1 {
+label="cluster_1";
+graph [style=dashed, color=black];
+"PBN-mc-async_full";
+"PBN-mc-async";
+"SM-bf";
+BoNesis;
+BoNesis_full;
+Caspo_full;
+"PBN-perc";
+"SM-bf_full";
+Caspo;
+"PBN-perc_full";
+}
+
+subgraph cluster_2 {
+label="cluster_2";
+graph [style=dashed, color=black];
+"SM-merge-min_full";
+"SM-merge-int_full";
+"PBN-trap";
+"CABEAN-PTC";
+"CABEAN-TTC_full";
+"CABEAN-PTC_full";
+"CABEAN-ITC";
+"SM-merge-int";
+"CABEAN-TTC";
+"PBN-trap_full";
+"SM-merge-min";
+"CABEAN-ITC_full";
+}
+
+"SM-merge-min_full" -> "PBN-mc-async" [ltail="cluster_2", lhead="cluster_1"];
+Caspo_full -> "PBN-mc-sync" [ltail="cluster_1", lhead="cluster_0"];
+}

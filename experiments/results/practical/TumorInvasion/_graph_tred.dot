@@ -1,0 +1,52 @@
+strict digraph G {
+graph [fontsize=10, fontname=Verdana, compound=true];
+node [shape=record, fontsize=10, fontname=Verdana];
+graph [nodesep=0.3, ranksep=0.8];
+subgraph cluster_0 {
+label="cluster_0";
+graph [style=dashed, color=black];
+"BoNesis-FP";
+ActoNet;
+}
+
+subgraph cluster_1 {
+label="cluster_1";
+graph [style=dashed, color=black];
+"BoNesis-MTS";
+"PBN-mc-async";
+}
+
+subgraph cluster_2 {
+label="cluster_2";
+graph [style=dashed, color=black];
+"PBN-perc";
+"SM-bf";
+Caspo;
+}
+
+subgraph cluster_3 {
+label="cluster_3";
+graph [style=dashed, color=black];
+"PBN-trap";
+"CABEAN-PTC";
+}
+
+subgraph cluster_4 {
+label="cluster_4";
+graph [style=dashed, color=black];
+"SM-merge-int";
+"SM-merge-min";
+}
+
+"CABEAN-ITC";
+"CABEAN-TTC";
+"PBN-mc-sync";
+"CABEAN-ITC" -> "PBN-perc" [lhead="cluster_2"];
+"CABEAN-ITC" -> "SM-merge-int" [lhead="cluster_4"];
+"PBN-mc-async" -> "BoNesis-FP" [ltail="cluster_1", lhead="cluster_0"];
+"PBN-mc-sync" -> "BoNesis-MTS" [lhead="cluster_1"];
+"PBN-trap" -> "CABEAN-TTC" [ltail="cluster_3"];
+"PBN-trap" -> "PBN-mc-sync" [ltail="cluster_3"];
+"SM-merge-min" -> "CABEAN-PTC" [ltail="cluster_4", lhead="cluster_3"];
+Caspo -> "PBN-mc-sync" [ltail="cluster_2"];
+}

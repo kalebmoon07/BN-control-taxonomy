@@ -1,0 +1,60 @@
+strict digraph G {
+graph [fontsize=10, fontname=Verdana, compound=true];
+node [shape=record, fontsize=10, fontname=Verdana];
+graph [nodesep=0.3, ranksep=0.8];
+subgraph cluster_0 {
+label="cluster_0";
+graph [style=dashed, color=black];
+ActoNet;
+"PBN-trap";
+ActoNet_full;
+BoNesis;
+BoNesis_full;
+"PBN-trap_full";
+}
+
+subgraph cluster_1 {
+label="cluster_1";
+graph [style=dashed, color=black];
+"PBN-mc-async_full";
+"PBN-mc-async";
+"PBN-mc-sync";
+"PBN-mc-sync_full";
+}
+
+subgraph cluster_2 {
+label="cluster_2";
+graph [style=dashed, color=black];
+"SM-bf";
+Caspo_full;
+"PBN-perc";
+"SM-bf_full";
+Caspo;
+"PBN-perc_full";
+}
+
+subgraph cluster_3 {
+label="cluster_3";
+graph [style=dashed, color=black];
+"SM-merge-min_full";
+"SM-merge-int_full";
+"CABEAN-TTC_full";
+"CABEAN-PTC_full";
+"CABEAN-ITC_full";
+}
+
+subgraph cluster_4 {
+label="cluster_4";
+graph [style=dashed, color=black];
+"CABEAN-PTC";
+"CABEAN-ITC";
+"SM-merge-int";
+"CABEAN-TTC";
+"SM-merge-min";
+}
+
+"PBN-mc-sync_full" -> "PBN-trap" [ltail="cluster_1", lhead="cluster_0"];
+"SM-merge-min" -> "CABEAN-ITC_full" [ltail="cluster_4", lhead="cluster_3"];
+"SM-merge-min_full" -> "PBN-perc" [ltail="cluster_3", lhead="cluster_2"];
+Caspo_full -> "PBN-mc-async" [ltail="cluster_2", lhead="cluster_1"];
+}
