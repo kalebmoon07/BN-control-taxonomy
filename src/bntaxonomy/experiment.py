@@ -253,7 +253,7 @@ class ExperimentHandler:
 
         if self.cabean == CABEAN_OUT_MEMORY:
             # if experienced out of memory, return empty result
-            results = CtrlResult(f"CABEAN-{method}", [])
+            results = CtrlResult(f"CABEAN[{method}]", [])
         else:
             results = ctrl_target_control_iface(
                 self.cabean, self.target, method, _debug, **kwargs

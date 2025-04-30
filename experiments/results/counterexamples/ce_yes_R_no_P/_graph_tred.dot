@@ -5,44 +5,29 @@ graph [nodesep=0.3, ranksep=0.8];
 subgraph cluster_0 {
 label="cluster_0";
 graph [style=dashed, color=black];
-"SM-merge-min";
-"CABEAN-TTC_full";
-"SM-merge-min_full";
-"CABEAN-TTC";
+"SM[minimal]";
+"CABEAN[TTC]";
 }
 
 subgraph cluster_1 {
 label="cluster_1";
 graph [style=dashed, color=black];
-"CABEAN-ITC";
-"CABEAN-ITC_full";
-}
-
-subgraph cluster_2 {
-label="cluster_2";
-graph [style=dashed, color=black];
-"PBN-mc-async_full";
-"SM-merge-int_full";
-"PBN-trap";
-"PBN-mc-async";
-"PBN-mc-sync";
-Caspo;
-"CABEAN-PTC";
-ActoNet_full;
-"SM-bf";
-BoNesis_full;
-"SM-merge-int";
-"PBN-mc-sync_full";
-"SM-bf_full";
-BoNesis;
-"PBN-perc";
-"PBN-trap_full";
-Caspo_full;
+"optbn[SA]";
+"BoNesis[MTS]";
+"optbn[FP]";
 ActoNet;
-"CABEAN-PTC_full";
-"PBN-perc_full";
+"BoNesis[FP]";
+"PBN[ASA]";
+"SM[brute-force]";
+"CABEAN[PTC]";
+"PBN[percolation]";
+"PBN[trap_spaces]";
+Caspo;
+"SM[internal]";
+"PBN[SA]";
 }
 
-"CABEAN-ITC_full" -> "CABEAN-TTC" [ltail="cluster_1", lhead="cluster_0"];
-Caspo_full -> "CABEAN-TTC" [ltail="cluster_2", lhead="cluster_0"];
+"CABEAN[ITC]";
+"CABEAN[ITC]" -> "CABEAN[TTC]" [lhead="cluster_0"];
+Caspo -> "CABEAN[TTC]" [ltail="cluster_1", lhead="cluster_0"];
 }

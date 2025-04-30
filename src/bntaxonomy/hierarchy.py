@@ -1,3 +1,4 @@
+from collections import defaultdict
 import json
 import os
 import networkx as nx
@@ -31,7 +32,11 @@ class SingleInputSummary:
 
     @staticmethod
     def from_folder(opath: str, name: str = ""):
-        files = [fname for fname in os.listdir(opath) if fname.endswith(".json") and not fname.endswith("_full.json")]
+        files = [
+            fname
+            for fname in os.listdir(opath)
+            if fname.endswith(".json") and not fname.endswith("_full.json")
+        ]
         sol_list = [
             CtrlResult(fname[:-5], json.load(open(f"{opath}/{fname}")))
             for fname in files
@@ -43,10 +48,14 @@ class SingleInputSummary:
 
 class MultiInputSummary:
     def __init__(
-        self, exp_list: list[SingleInputSummary], name: str = "MultiInputSummary"
+        self,
+        exp_list: list[SingleInputSummary],
+        name: str = "MultiInputSummary",
+        exp_groups: dict[str, list[SingleInputSummary]] = dict(),
     ):
         self.name = name
         self.exp_list = exp_list
+        self.exp_groups = exp_groups
         self.G, self.ce_G = nx.DiGraph(), nx.DiGraph()
         nodes = set(node for exp in self.exp_list for node in exp.G.nodes)
         self.G.add_nodes_from(nodes)
@@ -74,6 +83,20 @@ class MultiInputSummary:
         ]
         return MultiInputSummary(exp_list, name)
 
+    @staticmethod
+    def from_inst_groups(groups: list[str], name: str = "Hierarchy"):
+        exp_groups = defaultdict(list)
+        exp_list = []
+        for inst_selected in groups:
+            group_name = os.path.basename(inst_selected)
+            for exp_name in os.listdir(inst_selected):
+                input_summary = SingleInputSummary.from_folder(
+                    f"{inst_selected}/{exp_name}", exp_name
+                )
+                exp_groups[group_name].append(input_summary)
+                exp_list.append(input_summary)
+        return MultiInputSummary(exp_list, name, exp_groups)
+
     def save(self, fname: str):
         with suppress_console_output():
             dot_fname = f"{fname}.dot"
@@ -87,9 +110,8 @@ class MultiInputSummary:
     def get_exp_names(self):
         return [exp.name for exp in self.exp_list]
 
-    def to_conflict_matrix(self):
-        # conflict_matrix = nx.to_numpy_array(self.ce_G, nodelist=self.ce_G.nodes())
-        # return conflict_matrix
+    def to_conflict_matrix(self, use_group_idx=True, full=False):
+
         column_str = """
                         \\newcolumntype{O}[2]{%
                             >{\\adjustbox{angle=#1,lap=\\width-(#2)}\\bgroup} l <{\\egroup}%
@@ -103,20 +125,40 @@ class MultiInputSummary:
 
         node_idx = {node: idx for idx, node in enumerate(nodes)}
         exp_names = self.get_exp_names()
+
+        group_idx_dict = {
+            exp.name: chr(65 + idx) + str(exp_list.index(exp) + 1) ## A1, A2, B1, B2, etc.
+            for idx, exp_list in enumerate(self.exp_groups.values())
+            for exp in exp_list
+        }
+        
+        def convert_to_str(value):
+            if use_group_idx:
+                return group_idx_dict.get(value, value)
+            else:
+                return str(exp_names.index(value))
+        
         for src, dst, data in self.ce_G.edges(data=True):
-            if "counterexamples" in data and data["counterexamples"]:
+            i = node_idx[src]
+            j = node_idx[dst]
+            if full:
+                names = sorted([convert_to_str(exp.name) for exp in data["counterexamples"]])
+                matrix[i][j] = f"{','.join(names)}"
+            elif "counterexamples" in data and data["counterexamples"]:
                 example = data["counterexamples"][0].name  # assuming .name exists
-                i = node_idx[src]
-                j = node_idx[dst]
-                matrix[i][j] = str(exp_names.index(example))
+                matrix[i][j] = convert_to_str(example)
+
 
         # Build LaTeX tabular code
+        nodes = [node.replace('_','\\_') for node in sorted(self.ce_G.nodes())]  # fix consistent order
+
         latex = [column_str]
         latex.append("\\begin{tabular}{" + "|".join("c" * (n + 1)) + "}")
         latex.append("\\hline")
 
         # Header
         # header = [""] + list(nodes)
+        
         header = [""] + [f"\\rot{{{node}}}" for node in nodes]
         latex.append(" & ".join(header) + " \\\\ \\hline")
 

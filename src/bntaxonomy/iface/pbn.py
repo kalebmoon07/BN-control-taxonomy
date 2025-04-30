@@ -26,6 +26,7 @@ def ctrl_pbn_attr_iface(
     **kwargs,
 ):
     with suppress_console_output():
+        update_flage = "SA" if update == "synchronous" else "ASA"
         results = compute_control_strategies_with_model_checking(
             primes=pbn_primes,
             avoid_nodes=inputs,
@@ -34,7 +35,7 @@ def ctrl_pbn_attr_iface(
             update=update,
             **kwargs,
         )
-    return CtrlResult(f"PBN-mc-{update[:-7]}", results)
+    return CtrlResult(f"PBN[{update_flage}]", results)
 
 
 @time_check
@@ -56,4 +57,4 @@ def ctrl_pbn_heuristics_iface(
             intervention_type="node",
             **kwargs,
         )
-        return CtrlResult(f"PBN-{control_type[:4]}", results)
+        return CtrlResult(f"PBN[{control_type}]", results)

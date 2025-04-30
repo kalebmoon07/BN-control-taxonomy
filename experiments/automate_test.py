@@ -42,7 +42,10 @@ if __name__ == "__main__":
         )
 
         exp.ctrl_actonet_fp()
+        exp.ctrl_bonesis_fp()
         exp.ctrl_bonesis_mts()
+        exp.ctrl_optboolnet_fp()
+        exp.ctrl_optboolnet_sync_attr()
         exp.ctrl_caspo_vpts()
         for update in ["synchronous", "asynchronous"]:
             exp.ctrl_pyboolnet_model_checking(update)

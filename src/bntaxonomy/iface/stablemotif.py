@@ -32,7 +32,7 @@ def ctrl_sm_brute_force_iface(
     results = sm.drivers.knock_to_partial_state(
         target, sm_primes, min_drivers=0, max_drivers=max_size, **kwargs
     )
-    return CtrlResult("SM-bf", results)
+    return CtrlResult("SM[brute-force]", results)
 
 
 @time_check
@@ -47,4 +47,4 @@ def ctrl_sm_trapspace_iface(
     results = sm_attrs.reprogram_to_trap_spaces(
         target, target_method, driver_method, max_drivers=max_size, **kwargs
     )
-    return CtrlResult(f"SM-{target_method}-{driver_method[:3]}", results)
+    return CtrlResult(f"SM[{driver_method}]", results)

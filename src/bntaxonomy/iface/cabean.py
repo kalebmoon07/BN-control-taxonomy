@@ -123,4 +123,4 @@ def ctrl_target_control_iface(
                     node, value = c.split("=")
                     p[node] = int(value)
             ctrl_list.append(p)
-    return CtrlResult(f"CABEAN-{method}", ctrl_list)
+    return CtrlResult(f"CABEAN[{method}]", ctrl_list)

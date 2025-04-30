@@ -14,7 +14,7 @@ def ctrl_bonesis_mts_iface(
 ):
     with suppress_console_output():
         results = list(trapspace_reprogramming(bn, target, max_size))
-    return CtrlResult("BoNesis-MTS", results)
+    return CtrlResult("BoNesis[MTS]", results)
 
 
 @time_check
@@ -25,4 +25,4 @@ def ctrl_bonesis_fp_iface(
         results = list(
             marker_reprogramming_fixpoints(bn, target, max_size, at_least_one=False)
         )
-    return CtrlResult("BoNesis-FP", results)
+    return CtrlResult("BoNesis[FP]", results)
