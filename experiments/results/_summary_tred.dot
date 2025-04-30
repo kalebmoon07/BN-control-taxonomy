@@ -7,14 +7,22 @@ label="cluster_0";
 graph [style=dashed, color=black];
 ActoNet;
 "BoNesis-FP";
+"optbn[FP]";
 }
 
 subgraph cluster_1 {
 label="cluster_1";
 graph [style=dashed, color=black];
-"PBN-perc";
-Caspo;
+"PBN-mc-sync";
+"optbn[SA]";
+}
+
+subgraph cluster_2 {
+label="cluster_2";
+graph [style=dashed, color=black];
 "SM-bf";
+Caspo;
+"PBN-perc";
 }
 
 "BoNesis-MTS";
@@ -22,7 +30,6 @@ Caspo;
 "CABEAN-PTC";
 "CABEAN-TTC";
 "PBN-mc-async";
-"PBN-mc-sync";
 "PBN-trap";
 "SM-merge-int";
 "SM-merge-min";
@@ -31,14 +38,14 @@ Caspo;
 "CABEAN-PTC" -> "CABEAN-TTC";
 "CABEAN-PTC" -> "PBN-mc-async";
 "PBN-mc-async" -> "BoNesis-FP" [lhead="cluster_0"];
-"PBN-mc-sync" -> "BoNesis-FP" [lhead="cluster_0"];
 "PBN-trap" -> "BoNesis-MTS";
 "SM-merge-int" -> "CABEAN-PTC";
-"SM-merge-int" -> "PBN-mc-sync";
+"SM-merge-int" -> "PBN-mc-sync" [lhead="cluster_1"];
 "SM-merge-int" -> "PBN-trap";
 "SM-merge-int" -> "SM-merge-min";
 "SM-merge-min" -> "CABEAN-TTC";
-Caspo -> "BoNesis-MTS" [ltail="cluster_1"];
-Caspo -> "PBN-mc-async" [ltail="cluster_1"];
-Caspo -> "PBN-mc-sync" [ltail="cluster_1"];
+"optbn[SA]" -> "BoNesis-FP" [ltail="cluster_1", lhead="cluster_0"];
+Caspo -> "BoNesis-MTS" [ltail="cluster_2"];
+Caspo -> "PBN-mc-async" [ltail="cluster_2"];
+Caspo -> "PBN-mc-sync" [ltail="cluster_2", lhead="cluster_1"];
 }

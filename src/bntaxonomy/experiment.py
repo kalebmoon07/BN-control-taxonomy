@@ -99,6 +99,30 @@ class ExperimentHandler:
         results = ctrl_bonesis_fp_iface(self.bn, self.target, self.max_size, **kwargs)
         return self.postprocess(results)
 
+    ### optboolnet
+
+    def ctrl_optboolnet_sync_attr(self, **kwargs):
+        from bntaxonomy.iface.optboolnet import (
+            make_CNFBooleanNetwork_iface,
+            ctrl_optboolnet_sync_attr_iface,
+        )
+
+        cnf_bn = make_CNFBooleanNetwork_iface(self.bn, self.inputs, self.target)
+        results = ctrl_optboolnet_sync_attr_iface(self.name, cnf_bn, self.max_size)
+
+        return self.postprocess(results)
+
+    def ctrl_optboolnet_fp(self, **kwargs):
+        from bntaxonomy.iface.optboolnet import (
+            make_CNFBooleanNetwork_iface,
+            ctrl_optboolnet_fp_iface,
+        )
+
+        cnf_bn = make_CNFBooleanNetwork_iface(self.bn, self.inputs, self.target)
+        results = ctrl_optboolnet_fp_iface(self.name, cnf_bn, self.max_size)
+
+        return self.postprocess(results)
+
     ### Caspo
     def ctrl_caspo_vpts(self, **kwargs):
         from bntaxonomy.iface.caspo import ctrl_caspo_vpts_iface
