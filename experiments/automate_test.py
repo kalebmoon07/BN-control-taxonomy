@@ -6,7 +6,6 @@ import bntaxonomy.utils.log as log_utils
 cwd = os.path.dirname(os.path.abspath(__file__))
 
 insts_practical = f"{cwd}/instances/practical"
-insts_tonello = f"{cwd}/instances/Tonello"
 insts_ce = f"{cwd}/instances/counterexamples"
 
 
@@ -21,7 +20,7 @@ if __name__ == "__main__":
     log_utils.configure_logging(os.path.basename(__file__))
 
     max_size = 2
-    inst_groups = [insts_ce, insts_tonello, insts_practical]
+    inst_groups = [insts_ce, insts_practical]
     # inst_groups = [insts_ce]
 
     for inst_selected, inst in get_insts(inst_groups):

@@ -73,6 +73,11 @@ def cluster_cycles(input_dot: str, output_dot: str):
 
     # Find SCCs
     sccs = list(nx.strongly_connected_components(G_nx))
+    sccs = sorted(
+        [sorted(scc) for scc in sccs],  # sort nodes within each SCC
+        key=lambda x: x[0],  # sort SCCs by first element
+    )
+
     node_to_cluster = {}
     clusters = {}
 

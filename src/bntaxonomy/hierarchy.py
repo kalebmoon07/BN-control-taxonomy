@@ -109,9 +109,20 @@ class MultiInputSummary:
 
     def get_exp_names(self):
         return [exp.name for exp in self.exp_list]
+    
+    def get_exp_group_names(self):
+        return {group: [exp.name for exp in exp_list] for group, exp_list in self.exp_groups.items()}
 
-    def to_conflict_matrix(self, use_group_idx=True, full=False):
-
+    def to_conflict_matrix(self, use_group_idx=True, full_ce=False):
+        """
+            Generates a LaTeX table representing the conflict matrix of the counterexamples.
+            The table is formatted for use in a LaTeX document and includes rotation for headers.
+            The function can be customized to use group indices or full counterexample names.
+            Prints the LaTeX code for the table.
+            Args:
+                use_group_idx (bool): If True, uses group indices for the counterexamples; otherwise, uses the index of the counterexample in the list.
+                full_ce (bool): If True, includes full counterexample names in the matrix; otherwise, only the first matched name is used.
+        """
         column_str = """
                         \\newcolumntype{O}[2]{%
                             >{\\adjustbox{angle=#1,lap=\\width-(#2)}\\bgroup} l <{\\egroup}%
@@ -141,7 +152,7 @@ class MultiInputSummary:
         for src, dst, data in self.ce_G.edges(data=True):
             i = node_idx[src]
             j = node_idx[dst]
-            if full:
+            if full_ce:
                 names = sorted([convert_to_str(exp.name) for exp in data["counterexamples"]])
                 matrix[i][j] = f"{','.join(names)}"
             elif "counterexamples" in data and data["counterexamples"]:
@@ -170,3 +181,43 @@ class MultiInputSummary:
         latex.append("\\end{tabular}")
 
         return "\n".join(latex)
+
+    def to_conflict_matrix_csv(self, use_group_idx=True, full_ce=False):
+        # Get sorted list of nodes for consistent ordering
+        nodes = sorted(self.ce_G.nodes())
+        
+        # Build header
+        matrix = [",".join([""] + nodes)]
+        
+        exp_names = self.get_exp_names()
+        group_idx_dict = {
+            exp.name: chr(65 + idx) + str(exp_list.index(exp) + 1) ## A1, A2, B1, B2, etc.
+            for idx, exp_list in enumerate(self.exp_groups.values())
+            for exp in exp_list
+        }
+        def convert_to_str(value):
+            if use_group_idx:
+                return group_idx_dict.get(value, value)
+            else:
+                return str(exp_names.index(value))
+
+        # Populate the matrix
+        for src in nodes:
+            row = [src]
+            for dst in nodes:
+                if src == dst:
+                    row.append("")  # No self-loop
+                elif self.ce_G.has_edge(src, dst):
+                    ce_list = self.ce_G.edges[src, dst]["counterexamples"]
+                    if ce_list:
+                        if full_ce:
+                            names = sorted([convert_to_str(exp.name) for exp in ce_list])
+                            row.append('"'+ ",".join(names)+'"')
+                        else:
+                            row.append(convert_to_str(ce_list[0].name))  # Use the name of the first counterexample
+                    else:
+                        row.append("")
+                else:
+                    row.append("")
+            matrix.append(",".join(row))
+        return "\n".join(matrix)

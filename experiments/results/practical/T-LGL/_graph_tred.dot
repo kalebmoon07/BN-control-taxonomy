@@ -5,47 +5,47 @@ graph [nodesep=0.3, ranksep=0.8];
 subgraph cluster_0 {
 label="cluster_0";
 graph [style=dashed, color=black];
+"BoNesis[FP]";
 "optbn[FP]";
 ActoNet;
-"BoNesis[FP]";
 }
 
 subgraph cluster_1 {
 label="cluster_1";
 graph [style=dashed, color=black];
-"optbn[SA]";
-"PBN[SA]";
+"BoNesis[MTS]";
+"PBN[ASA]";
 }
 
 subgraph cluster_2 {
 label="cluster_2";
 graph [style=dashed, color=black];
-"BoNesis[MTS]";
-"PBN[ASA]";
+"CABEAN[ITC]";
+"CABEAN[PTC]";
+"CABEAN[TTC]";
+"SM[internal]";
+"SM[minimal]";
 }
 
 subgraph cluster_3 {
 label="cluster_3";
+graph [style=dashed, color=black];
+"PBN[SA]";
+"optbn[SA]";
+}
+
+subgraph cluster_4 {
+label="cluster_4";
 graph [style=dashed, color=black];
 "PBN[percolation]";
 "SM[brute-force]";
 Caspo;
 }
 
-subgraph cluster_4 {
-label="cluster_4";
-graph [style=dashed, color=black];
-"SM[minimal]";
-"CABEAN[TTC]";
-"CABEAN[PTC]";
-"CABEAN[ITC]";
-"SM[internal]";
-}
-
 "PBN[trap_spaces]";
-"PBN[ASA]" -> "PBN[SA]" [ltail="cluster_2", lhead="cluster_1"];
-"PBN[trap_spaces]" -> "PBN[percolation]" [lhead="cluster_3"];
-"SM[minimal]" -> "PBN[trap_spaces]" [ltail="cluster_4"];
-"optbn[SA]" -> "BoNesis[FP]" [ltail="cluster_1", lhead="cluster_0"];
-Caspo -> "BoNesis[MTS]" [ltail="cluster_3", lhead="cluster_2"];
+"PBN[ASA]" -> "PBN[SA]" [ltail="cluster_1", lhead="cluster_3"];
+"PBN[trap_spaces]" -> "PBN[percolation]" [lhead="cluster_4"];
+"SM[minimal]" -> "PBN[trap_spaces]" [ltail="cluster_2"];
+"optbn[SA]" -> "BoNesis[FP]" [ltail="cluster_3", lhead="cluster_0"];
+Caspo -> "BoNesis[MTS]" [ltail="cluster_4", lhead="cluster_1"];
 }

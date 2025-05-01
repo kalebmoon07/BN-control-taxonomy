@@ -1,0 +1,17 @@
+,ActoNet,BoNesis[FP],BoNesis[MTS],CABEAN[ITC],CABEAN[PTC],CABEAN[TTC],Caspo,PBN[ASA],PBN[SA],PBN[percolation],PBN[trap_spaces],SM[brute-force],SM[internal],SM[minimal],optbn[FP],optbn[SA]
+ActoNet,,,A1,A1,A1,A1,A1,A1,A1,A1,A1,A1,A1,A1,,A1
+BoNesis[FP],,,A1,A1,A1,A1,A1,A1,A1,A1,A1,A1,A1,A1,,A1
+BoNesis[MTS],,,,A1,A1,A1,A3,B8,A4,A3,A1,A3,A1,A1,,A4
+CABEAN[ITC],B5,B5,B2,,B5,,B2,B5,B5,B2,B2,B2,B2,B2,B5,B5
+CABEAN[PTC],,,B2,A1,,,A4,,B6,A4,B2,A4,A4,A4,,B6
+CABEAN[TTC],A4,A4,A4,A1,A4,,A4,A4,A4,A4,A4,A4,A4,A4,A4,A4
+Caspo,,,,A1,A1,A1,,,,,A1,,A1,A1,,
+PBN[ASA],,,B2,A1,A1,A1,A3,,A4,A3,A1,A3,A1,A1,,A4
+PBN[SA],,,A3,A1,A1,A1,A3,A3,,A3,A1,A3,A1,A1,,
+PBN[percolation],,,,A1,A1,A1,,,,,A1,,A1,A1,,
+PBN[trap_spaces],,,,A1,A3,A3,A4,B8,B8,A4,,A4,A3,A3,,B8
+SM[brute-force],,,,A1,A1,A1,,,,,A1,,A1,A1,,
+SM[internal],,,,A1,,,A4,,,A4,,A4,,,,
+SM[minimal],B5,B5,B5,A1,B5,,A4,B5,B5,A4,B5,A4,B5,,B5,B5
+optbn[FP],,,A1,A1,A1,A1,A1,A1,A1,A1,A1,A1,A1,A1,,A1
+optbn[SA],,,A3,A1,A1,A1,A3,A3,,A3,A1,A3,A1,A1,,

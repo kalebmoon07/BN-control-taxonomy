@@ -5,8 +5,8 @@ graph [nodesep=0.3, ranksep=0.8];
 subgraph cluster_0 {
 label="cluster_0";
 graph [style=dashed, color=black];
-"optbn[FP]";
 "BoNesis[FP]";
+"optbn[FP]";
 ActoNet;
 }
 

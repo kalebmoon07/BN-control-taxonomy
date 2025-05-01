@@ -5,31 +5,31 @@ graph [nodesep=0.3, ranksep=0.8];
 subgraph cluster_0 {
 label="cluster_0";
 graph [style=dashed, color=black];
+"BoNesis[FP]";
 "optbn[FP]";
 ActoNet;
-"BoNesis[FP]";
 }
 
 subgraph cluster_1 {
 label="cluster_1";
 graph [style=dashed, color=black];
-"optbn[SA]";
 "BoNesis[MTS]";
 "PBN[ASA]";
-"SM[brute-force]";
-"PBN[percolation]";
-Caspo;
 "PBN[SA]";
+"PBN[percolation]";
+"SM[brute-force]";
+"optbn[SA]";
+Caspo;
 }
 
 subgraph cluster_2 {
 label="cluster_2";
 graph [style=dashed, color=black];
-"SM[minimal]";
-"CABEAN[TTC]";
 "CABEAN[PTC]";
+"CABEAN[TTC]";
 "PBN[trap_spaces]";
 "SM[internal]";
+"SM[minimal]";
 }
 
 "CABEAN[ITC]";

@@ -1,0 +1,18 @@
+{
+    "practical": [
+        "Bladder",
+        "Myeloid",
+        "T-LGL",
+        "TumorInvasion"
+    ],
+    "counterexamples": [
+        "ce_long_attr",
+        "ce_yes_ASA_no_MTS",
+        "ce_yes_OI_no_OT",
+        "ce_yes_P_no_R",
+        "ce_yes_R_no_P",
+        "Tonello_1",
+        "Tonello_2",
+        "Tonello_3"
+    ]
+}
