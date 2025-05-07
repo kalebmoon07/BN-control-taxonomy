@@ -8,7 +8,7 @@ from cabean import CabeanInstance, CabeanIface
 from cabean.iface import CabeanResult
 from colomoto.types import PartialState
 
-from bntaxonomy.utils.log import time_check
+from bntaxonomy.utils.log import time_check, main_logger
 
 cabean_path = f"{os.path.dirname(os.path.abspath(__file__))}/../dep/cabean_2.0.0"
 
@@ -36,11 +36,11 @@ class CabeanInstancePrecomputed(CabeanInstance):
 
 @time_check
 def make_cabean_iface(bn: BooleanNetwork):
-    print("Loading cabean and computing attractors")
+    main_logger.info("Loading cabean and computing attractors")
     try:
         return CabeanInstancePrecomputed(bn)
     except Exception as e:
-        print(f"Error loading cabean: {e}")
+        main_logger.info(f"Error loading cabean: {e}")
         return CABEAN_OUT_MEMORY
 
 
@@ -107,15 +107,14 @@ def ctrl_target_control_iface(
             if is_phenotype:
                 ctrl_list.append(dict())
             if _debug:
-                print(
-                    line,
-                    cabean_obj.attractors,
-                    f"phenotype: {target}, {is_phenotype}",
-                )
+                main_logger.info(line)
+                main_logger.info(cabean_obj.attractors)
+                main_logger.info(f"phenotype: {target}, {is_phenotype}")
+
         if line.startswith("Error:"):
             # Error: could not find any attractor based on the markers of attractors.
             if _debug:
-                print(line)
+                main_logger.info(line)
         if line.lower().startswith("control set"):
             p = dict()
             for c in line.strip().split():

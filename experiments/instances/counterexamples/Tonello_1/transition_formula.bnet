@@ -1,4 +1,3 @@
 x1, x2 & ! x3
 x2, x3 & !x2
 x3, x2 | !x3
-PHENOTYPE, !x1

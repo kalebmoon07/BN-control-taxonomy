@@ -55,7 +55,7 @@ if __name__ == "__main__":
             for driver_method in ["minimal", "internal"]:
                 exp.ctrl_pystablemotif_trapspace(target_method, driver_method)
         for method in ["ITC", "TTC", "PTC"]:
-            exp.ctrl_cabean_target_control(method)
+            exp.ctrl_cabean_target_control(method, _debug=True)
 
         exp_run = SingleInputSummary.from_folder(opath, inst)
         exp_run.save(f"{opath}/_graph")
