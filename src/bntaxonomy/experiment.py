@@ -132,6 +132,7 @@ class ExperimentHandler:
         )
 
     def run_tools(self):
+        # self.tools = registered_tools # imported from bntaxonomy.iface
         for toolcls in self.tools:
             main_logger.info(f"Running {toolcls.name}")
             args = (self.expid, self.cachedir) if toolcls.uses_cache else ()
@@ -149,7 +150,7 @@ class ExperimentHandler:
         for toolcls in self.tools:
             if toolcls.uses_cache:
                 main_logger.info(f"Cleaning cache for {toolcls.name}")
-                toolcls.free_cache(self.expid)
+                toolcls.free_experiment(self.expid)
 
 
     ### PyBoolNet

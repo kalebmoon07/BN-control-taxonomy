@@ -1,4 +1,11 @@
-from bntaxonomy import register_tool
+
+"""
+Installation instructions
+
+...
+"""
+
+from bntaxonomy.iface import register_tool
 from bntaxonomy.utils.log import main_logger
 
 cache = {}
@@ -20,6 +27,7 @@ def make_primes(bnfile, cachedir):
     return primes
 
 
+@register_tool
 class MyToolMethod1:
     name = "myGreatMethod"
     uses_cache = True
@@ -35,6 +43,3 @@ class MyToolMethod1:
     @staticmethod
     def free_experiment(expid):
         del cache[expid]
-
-
-register_tool(MyToolMethod1)
