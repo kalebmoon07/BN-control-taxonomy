@@ -131,6 +131,27 @@ class ExperimentHandler:
             ctrl_caspo_vpts_iface(self.bn, self.target, self.max_size, **kwargs)
         )
 
+    def run_tools(self):
+        for toolcls in self.tools:
+            main_logger.info(f"Running {toolcls.name}")
+            args = (self.expid, self.cachedir) if toolcls.uses_cache else ()
+            if toolcls.bn_type == "bnet_file":
+                bninp = self.bnet_file
+            elif toolcls.bn_type == "colomoto.BooleanNetwork":
+                bninp = self.bn
+            else:
+                raise TypeError(f"{toolcls.name}: Unknown BN type input {toolcls.bn_type}")
+            res = toolcls.run(bninp, self.max_size, self.target, self.exclude,
+                                *args)
+            res = CtrlResult(toolcls.name, res)
+            self.postprocess(res)
+
+        for toolcls in self.tools:
+            if toolcls.uses_cache:
+                main_logger.info(f"Cleaning cache for {toolcls.name}")
+                toolcls.free_cache(self.expid)
+
+
     ### PyBoolNet
     def make_primes(self):
         from bntaxonomy.iface.pbn import make_pbn_primes_iface, PRIME_JSON_FILE
@@ -156,7 +177,7 @@ class ExperimentHandler:
 
         self.make_primes()
         results = ctrl_pbn_attr_iface(
-            self.primes, self.inputs, self.target, update, self.max_size, **kwargs
+            self.primes, self.target, self.target, update, self.max_size, **kwargs
         )
         return self.postprocess(results)
 
@@ -168,7 +189,7 @@ class ExperimentHandler:
         self.make_primes()
         results = ctrl_pbn_heuristics_iface(
             self.primes,
-            self.inputs,
+            self.target,
             self.target,
             control_type,
             self.max_size,
