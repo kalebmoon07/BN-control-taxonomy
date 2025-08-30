@@ -20,6 +20,7 @@ class ExperimentHandler:
         to_console: bool = True,
         to_file: bool = True,
         only_minimal: bool = True,
+        exclude_targets: bool = False,
         dump_full: bool = True,
         load_precompute: bool = False,
     ):
@@ -41,7 +42,8 @@ class ExperimentHandler:
         self.inputs: dict[str, int] = setting["inputs"]
         self.target: dict[str, int] = setting["target"]
         self.exclude: list[str] = setting.get("exclude", [])
-        #self.exclude.extends(self.target)
+        if exclude_targets:
+            self.exclude.extend(self.target)
 
         # Load the original Boolean network
         self.bnet_fname = f"{self.input_path}/transition_formula.bnet"

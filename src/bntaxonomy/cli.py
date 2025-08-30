@@ -19,6 +19,8 @@ def main():
     load_tools()
 
     ap = ArgumentParser()
+    ap.add_argument("--exclude-targets", action="store_true",
+            help="Exclude nodes specifying the target phenotype from candidate perturbations")
     ap.add_argument("max_size", type=int,
             help="Maximum number of perturbations")
     ap.add_argument("instances", type=str, nargs="+",
@@ -57,6 +59,7 @@ def main():
             to_file=True,
             only_minimal=True,
             load_precompute=True,
+            exclude_targets=args.exclude_targets,
         )
         exp.run_tools(args.tools)
 
