@@ -3,19 +3,30 @@ import glob
 import os
 from bntaxonomy.utils.log import main_logger
 
-def load_tools(extra_dirs=[]):
-    basedirs = [os.path.dirname(__file__)] + extra_dirs
+def load_tools():
+    basedirs = [os.path.dirname(__file__)]
+    __TOOLS.clear()
     for basedir in basedirs:
         for toolfile in glob.glob(f"{basedir}/*.py"):
-            if toolfile[0] == "_":
+            toolname = os.path.basename(toolfile)[:-3]
+            if toolname[0] == "_":
                 continue
             try:
-                __import__(f".{toolfile[:-3]}")
+                __import__(f"bntaxonomy.iface.{toolname}")
             except Exception as e:
-                main_logger.warning(f"Fail to load tool file {toolfile} ({e})")
+                main_logger.warning(f"Fail to load tool '{toolname}' ({e})")
 
-registered_tools = []
+__TOOLS = []
+
+def tool_names():
+    return [t.name for t in __TOOLS]
+
+def registered_tools():
+    return iter(__TOOLS)
 
 def register_tool(toolcls):
-    registered_tools.append(toolcls)
+    if not hasattr(toolcls, "uses_cache"):
+        toolcls.uses_cache = False
+    __TOOLS.append(toolcls)
+    main_logger.info(f"Registered tool {toolcls.name}")
     return toolcls

@@ -6,6 +6,7 @@ from colomoto.minibn import BooleanNetwork
 from bntaxonomy.utils.control import CtrlResult
 from bntaxonomy.utils.log import main_logger
 import bntaxonomy.utils.log as log_utils
+from bntaxonomy.iface import registered_tools
 
 
 class ExperimentHandler:
@@ -39,6 +40,8 @@ class ExperimentHandler:
             setting = json.load(_f)
         self.inputs: dict[str, int] = setting["inputs"]
         self.target: dict[str, int] = setting["target"]
+        self.exclude: list[str] = setting.get("exclude", [])
+        #self.exclude.extends(self.target)
 
         # Load the original Boolean network
         self.bnet_fname = f"{self.input_path}/transition_formula.bnet"
@@ -86,19 +89,6 @@ class ExperimentHandler:
         results = ctrl_actonet_fp_iface(self.bn, self.target, self.max_size, **kwargs)
         return self.postprocess(results)
 
-    ### BoNesis
-    def ctrl_bonesis_mts(self, **kwargs):
-        from bntaxonomy.iface.bonesis import ctrl_bonesis_mts_iface
-
-        results = ctrl_bonesis_mts_iface(self.bn, self.target, self.max_size, **kwargs)
-        return self.postprocess(results)
-
-    def ctrl_bonesis_fp(self, **kwargs):
-        from bntaxonomy.iface.bonesis import ctrl_bonesis_fp_iface
-
-        results = ctrl_bonesis_fp_iface(self.bn, self.target, self.max_size, **kwargs)
-        return self.postprocess(results)
-
     ### optboolnet
 
     def ctrl_optboolnet_sync_attr(self, **kwargs):
@@ -131,9 +121,11 @@ class ExperimentHandler:
             ctrl_caspo_vpts_iface(self.bn, self.target, self.max_size, **kwargs)
         )
 
-    def run_tools(self):
-        # self.tools = registered_tools # imported from bntaxonomy.iface
-        for toolcls in self.tools:
+    def run_tools(self, filter_tools):
+        for toolcls in registered_tools():
+            if filter_tools and toolcls.name not in filter_tools:
+                continue
+
             main_logger.info(f"Running {toolcls.name}")
             args = (self.expid, self.cachedir) if toolcls.uses_cache else ()
             if toolcls.bn_type == "bnet_file":
@@ -147,7 +139,7 @@ class ExperimentHandler:
             res = CtrlResult(toolcls.name, res)
             self.postprocess(res)
 
-        for toolcls in self.tools:
+        for toolcls in registered_tools():
             if toolcls.uses_cache:
                 main_logger.info(f"Cleaning cache for {toolcls.name}")
                 toolcls.free_experiment(self.expid)
@@ -281,3 +273,5 @@ class ExperimentHandler:
                 self.cabean, self.target, method, _debug, **kwargs
             )
         return self.postprocess(results)
+
+

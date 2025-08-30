@@ -1,28 +1,36 @@
+from bntaxonomy.iface import register_tool
+from bntaxonomy.utils.log import main_logger
+
+from bntaxonomy.utils.control import suppress_console_output
+from bntaxonomy.utils.log import time_check
+
 import bonesis
 from colomoto.minibn import BooleanNetwork
 from bonesis.reprogramming import (
     marker_reprogramming_fixpoints,
-    trapspace_reprogramming,
+    marker_reprogramming,
 )
-from bntaxonomy.utils.control import CtrlResult, suppress_console_output
-from bntaxonomy.utils.log import time_check
 
+@register_tool
+class BoNesisFixedPoints:
+    name = "BoNesis[FP]"
+    bn_type = "colomoto.BooleanNetwork"
 
-@time_check
-def ctrl_bonesis_mts_iface(
-    bn: BooleanNetwork, target: dict[str, int], max_size: int, **kwargs
-):
-    with suppress_console_output():
-        results = list(trapspace_reprogramming(bn, target, max_size))
-    return CtrlResult("BoNesis[MTS]", results)
+    @time_check
+    @staticmethod
+    def run(bn, max_size, target, exclude):
+        with suppress_console_output():
+            return list(marker_reprogramming_fixpoints(bn, target, max_size,
+                                       exclude=exclude, at_least_one=False))
 
+@register_tool
+class BoNesisTrapSpaces:
+    name = "BoNesis[MTS]"
+    bn_type = "colomoto.BooleanNetwork"
 
-@time_check
-def ctrl_bonesis_fp_iface(
-    bn: BooleanNetwork, target: dict[str, int], max_size: int, **kwargs
-):
-    with suppress_console_output():
-        results = list(
-            marker_reprogramming_fixpoints(bn, target, max_size, at_least_one=False)
-        )
-    return CtrlResult("BoNesis[FP]", results)
+    @time_check
+    @staticmethod
+    def run(bn, max_size, target, exclude):
+        with suppress_console_output():
+            return list(marker_reprogramming(bn, target, max_size,
+                                             exclude=exclude))
