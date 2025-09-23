@@ -7,6 +7,11 @@ setup(
     package_dir={"": "src"},
     install_requires=[],
     # entry_points={"console_scripts": []},
+    install_requires=[
+        "algorecell-types",
+        "networkx",
+        "matplotlib",
+    ],
     author="",
     author_email="",
     description="",
