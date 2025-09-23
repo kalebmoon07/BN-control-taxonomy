@@ -3,6 +3,7 @@ import json
 import os
 import networkx as nx
 from itertools import combinations, product
+from colomoto.minibn import BooleanNetwork
 
 
 from bntaxonomy.utils.control import CtrlResult, suppress_console_output
@@ -10,10 +11,12 @@ import bntaxonomy.utils.graph as graph_utils
 
 
 class SingleInputSummary:
-    def __init__(self, results: list[CtrlResult], name: str = "SingleInputSummary"):
+    def __init__(self, results: list[CtrlResult], name: str = "SingleInputSummary", bn: BooleanNetwork | None = None):
         self.name = name
         self.results = results
         self.G = nx.DiGraph()
+        self.bn = bn
+
         for r1, r2 in combinations(self.results, 2):
             if r1.is_stronger_than(r2):
                 self.G.add_edge(r2.name, r1.name)
@@ -31,7 +34,7 @@ class SingleInputSummary:
             graph_utils.export_dot_png(tred_fname, f"{fname}_tred.png")
 
     @staticmethod
-    def from_folder(opath: str, name: str = ""):
+    def from_folder(opath: str, name: str = "", bn: BooleanNetwork | None = None):
         files = [
             fname
             for fname in os.listdir(opath)
@@ -43,7 +46,7 @@ class SingleInputSummary:
         ]
         if not name:
             name = opath.split("/")[-1]
-        return SingleInputSummary(sol_list, name)
+        return SingleInputSummary(sol_list, name, bn)
 
 
 class MultiInputSummary:
@@ -89,9 +92,11 @@ class MultiInputSummary:
         exp_list = []
         for inst_selected in groups:
             group_name = os.path.basename(inst_selected)
+            inst_bn_folder = inst_selected.replace("results", "instances")
             for exp_name in os.listdir(inst_selected):
+                bn = BooleanNetwork.load(f"{inst_bn_folder}/{exp_name}/transition_formula.bnet")
                 input_summary = SingleInputSummary.from_folder(
-                    f"{inst_selected}/{exp_name}", exp_name
+                    f"{inst_selected}/{exp_name}", exp_name, bn
                 )
                 exp_groups[group_name].append(input_summary)
                 exp_list.append(input_summary)
