@@ -12,6 +12,37 @@ import matplotlib.pyplot as plt
 
 cwd = os.path.dirname(os.path.abspath(__file__))
 
+# --- Visual constants to keep bar/pad uniform across inputs (inches) ---
+# Tweak to taste; these are physical sizes, so results stay visually consistent.
+BAR_W_IN = 0.22  # width of each bar (inches)
+GAP_IN = 0.12  # gap between neighboring bars (inches)
+MARGIN_LR_IN = 0.6  # left/right figure margins (inches)
+MARGIN_TB_IN = 0.6  # top/bottom figure margins (inches)
+WSPACE_IN = 0.35  # inter-subplot horizontal spacing (inches)
+HSPACE_IN = 0.45  # inter-subplot vertical spacing (inches)
+
+
+def _slot_in():
+    """One x-slot = one bar + one gap, in inches."""
+    return BAR_W_IN + GAP_IN
+
+
+def _bar_width_frac():
+    """Bar width in data-units when 1 x-unit == one slot."""
+    return BAR_W_IN / (BAR_W_IN + GAP_IN)
+
+
+def _compute_figsize_grid(n_bars: int, rows: int, cols: int, panel_h_in: float = 3.6):
+    """
+    For a grid of subplots where each panel has the same number of bars (n_bars),
+    compute a figure size that keeps bar/gap widths constant in inches.
+    """
+    content_w_in = n_bars * _slot_in()
+    fig_w = (cols * content_w_in) + (cols - 1) * WSPACE_IN + 2 * MARGIN_LR_IN
+    fig_h = (rows * panel_h_in) + (rows - 1) * HSPACE_IN + 2 * MARGIN_TB_IN
+    return fig_w, fig_h
+
+
 inst_groups = [
     result_dir.replace("instances", "results")
     for result_dir in [insts_practical, insts_ce]
@@ -170,12 +201,26 @@ if __name__ == "__main__":
         cols = math.ceil(math.sqrt(total))
         rows = math.ceil(total / cols)
 
+        # --- figure size derived from desired physical bar/pad sizes ---
+        fig_w, fig_h = _compute_figsize_grid(len(algs_all), rows, cols, panel_h_in=3.6)
         fig, axes = plt.subplots(
-            rows, cols, figsize=(5 * cols, 5 * rows), sharex=False, sharey=True
+            rows, cols, figsize=(fig_w, fig_h), sharex=False, sharey=True
         )
+
         axes = np.array(axes).reshape(-1)
 
-        width = 0.38  # bar width
+        # Convert inch spacings into figure-fractions for precise layout
+        fig.subplots_adjust(
+            left=MARGIN_LR_IN / fig_w,
+            right=1 - MARGIN_LR_IN / fig_w,
+            top=1 - MARGIN_TB_IN / fig_h,
+            bottom=MARGIN_TB_IN / fig_h,
+            wspace=(WSPACE_IN / (len(algs_all) * _slot_in())) if cols > 1 else 0.2,
+            hspace=(HSPACE_IN / 3.6) if rows > 1 else 0.25,
+        )
+
+        # Width in data units so that each bar maps to BAR_W_IN inches
+        width = _bar_width_frac()
 
         # ---- per-gene panels ----
         for i, gene in enumerate(genes):
@@ -188,7 +233,11 @@ if __name__ == "__main__":
             )
             g = g.reindex(algs_all, fill_value=0.0)
 
-            x = np.arange(len(algs_all))
+            # Place each bar in a 1.0-wide slot: centers at 0.5, 1.5, ...
+            n_bars = len(algs_all)
+            x = np.arange(n_bars) + 0.5
+            ax.set_xlim(0, n_bars)  # ensures 1 data unit == one (bar+gap) slot
+
             bars_pos = ax.bar(x, g["pos"].to_numpy(), width, label="Positive")
             bars_neg = ax.bar(x, g["neg"].to_numpy(), width, label="Negative")
 
@@ -236,14 +285,42 @@ if __name__ == "__main__":
         sum_by_gene["total"] = sum_by_gene["pos"] + sum_by_gene["neg"].abs()
         sum_by_gene = sum_by_gene.sort_values(by="total", ascending=False)
 
+        y_max = max(
+            sum_by_alg["pos"].max(),
+            sum_by_alg["neg"].abs().max(),
+            sum_by_gene["pos"].max(),
+            sum_by_gene["neg"].abs().max(),
+        )
+
         # ---- new figure with summary blocks only ----
-        width = 0.38
+        width = _bar_width_frac()
+
+        # Compute a figure width that keeps bars & gaps constant on both axes
+        n_alg = len(algs_all)
+        n_gene = len(genes)
+        content_alg_w = max(1, n_alg) * _slot_in()
+        content_gene_w = max(1, n_gene) * _slot_in()
+        fig_w_s = content_alg_w + content_gene_w + WSPACE_IN + 2 * MARGIN_LR_IN
+        fig_h_s = 6
+
         fig_s, (ax_sum_alg, ax_sum_gene) = plt.subplots(
-            1, 2, figsize=(max(8, 1.5 * len(algs_all) + 4), 6), sharey=False
+            1,
+            2,
+            figsize=(fig_w_s, fig_h_s),
+            gridspec_kw={"width_ratios": [content_alg_w, content_gene_w]},
+            sharey=False,
+        )
+        fig_s.subplots_adjust(
+            left=MARGIN_LR_IN / fig_w_s,
+            right=1 - MARGIN_LR_IN / fig_w_s,
+            top=1 - MARGIN_TB_IN / fig_h_s,
+            bottom=MARGIN_TB_IN / fig_h_s,
+            wspace=WSPACE_IN / (content_alg_w if content_alg_w > 0 else 1),
         )
 
         # Summary #1: Σ over genes per Algorithm
-        x = np.arange(len(algs_all))
+        x = np.arange(n_alg) + 0.5
+        ax_sum_alg.set_xlim(0, n_alg)
         bars_pos_s1 = ax_sum_alg.bar(
             x, sum_by_alg["pos"].to_numpy(), width, label="Positive (Σ genes)"
         )
@@ -251,14 +328,13 @@ if __name__ == "__main__":
             x, sum_by_alg["neg"].to_numpy(), width, label="Negative (Σ genes)"
         )
 
-        ymax = float(max(0.0, sum_by_alg["pos"].max())) if len(sum_by_alg) else 0.0
-        ymin = float(min(0.0, sum_by_alg["neg"].min())) if len(sum_by_alg) else 0.0
-        pad = 0.1 * (ymax - ymin + 1e-9)
-        ax_sum_alg.set_ylim(ymin - pad, ymax + pad)
+        pad = 0.1 * (y_max)
+        ax_sum_alg.set_ylim(-y_max - pad, y_max + pad)
 
         ax_sum_alg.axhline(0, linewidth=1)
-        ax_sum_alg.set_title("Summary: Σ over genes (per Algorithm)")
+        ax_sum_alg.set_title("Σ over genes")
         ax_sum_alg.set_ylabel("Score (sum 1/n^{|C|-1})")
+        ax_sum_alg.set_xlabel("Algorithm")
         ax_sum_alg.set_xticks(x, algs_all, rotation=45, ha="right")
         ax_sum_alg.grid(axis="y", alpha=0.3)
         annotate_bars(ax_sum_alg, bars_pos_s1, fmt="{:.2f}")
@@ -266,7 +342,8 @@ if __name__ == "__main__":
         # ax_sum_alg.legend()
 
         # Summary #2: Σ over algorithms per Gene
-        xg = np.arange(len(genes))
+        xg = np.arange(n_gene) + 0.5
+        ax_sum_gene.set_xlim(0, n_gene)
         bars_pos_s2 = ax_sum_gene.bar(
             xg, sum_by_gene["pos"].to_numpy(), width, label="Positive (Σ algs)"
         )
@@ -274,14 +351,12 @@ if __name__ == "__main__":
             xg, sum_by_gene["neg"].to_numpy(), width, label="Negative (Σ algs)"
         )
 
-        ymax = float(max(0.0, sum_by_gene["pos"].max())) if len(sum_by_gene) else 0.0
-        ymin = float(min(0.0, sum_by_gene["neg"].min())) if len(sum_by_gene) else 0.0
-        pad = 0.1 * (ymax - ymin + 1e-9)
-        ax_sum_gene.set_ylim(ymin - pad, ymax + pad)
+        ax_sum_gene.set_ylim(-y_max - pad, y_max + pad)
 
         ax_sum_gene.axhline(0, linewidth=1)
-        ax_sum_gene.set_title("Summary: Σ over algorithms (per Gene)")
+        ax_sum_gene.set_title("Σ over algorithms")
         ax_sum_gene.set_ylabel("Score (sum 1/n^{|C|-1})")
+        ax_sum_gene.set_xlabel("Gene")
         ax_sum_gene.set_xticks(xg, genes, rotation=45, ha="right")
         ax_sum_gene.grid(axis="y", alpha=0.3)
         annotate_bars(ax_sum_gene, bars_pos_s2, fmt="{:.2f}")
