@@ -190,12 +190,16 @@ for inst, sub_df in score_df.groupby("Instance"):
         .sum()
         .reindex(algs_all, fill_value=0.0)
     )
+    sum_by_alg["total"] = sum_by_alg["pos"] + sum_by_alg["neg"].abs()
+    sum_by_alg = sum_by_alg.sort_values(by="total", ascending=False)
     sum_by_gene = (
         wide.reset_index()
         .groupby("Gene", as_index=True)[["pos", "neg"]]
         .sum()
         .reindex(genes, fill_value=0.0)
     )
+    sum_by_gene["total"] = sum_by_gene["pos"] + sum_by_gene["neg"].abs()
+    sum_by_gene = sum_by_gene.sort_values(by="total", ascending=False)
 
     # ---- new figure with summary blocks only ----
     width = 0.38
@@ -224,7 +228,7 @@ for inst, sub_df in score_df.groupby("Instance"):
     ax_sum_alg.grid(axis="y", alpha=0.3)
     annotate_bars(ax_sum_alg, bars_pos_s1, fmt="{:.2f}")
     annotate_bars(ax_sum_alg, bars_neg_s1, fmt="{:.2f}")
-    ax_sum_alg.legend()
+    # ax_sum_alg.legend()
 
     # Summary #2: Σ over algorithms per Gene
     xg = np.arange(len(genes))
@@ -247,7 +251,7 @@ for inst, sub_df in score_df.groupby("Instance"):
     ax_sum_gene.grid(axis="y", alpha=0.3)
     annotate_bars(ax_sum_gene, bars_pos_s2, fmt="{:.2f}")
     annotate_bars(ax_sum_gene, bars_neg_s2, fmt="{:.2f}")
-    ax_sum_gene.legend()
+    # ax_sum_gene.legend()
 
     fig_s.suptitle(f"Instance={inst} — Summary", y=0.98, fontsize=12)
     plt.tight_layout()
