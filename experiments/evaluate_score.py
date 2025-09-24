@@ -49,6 +49,7 @@ inst_groups = [
 ]
 
 if __name__ == "__main__":
+    # Command-line args
     parser = argparse.ArgumentParser(description="Compute/plot control scores.")
     parser.add_argument(
         "-a",
@@ -58,8 +59,28 @@ if __name__ == "__main__":
         help="Algorithms to include. If omitted, include all.",
         default=None,
     )
+    parser.add_argument(
+        "-i",
+        "--inst_groups",
+        nargs="+",
+        help="Instance groups to include. Default: all.",
+        default=inst_groups,
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        help="Output directory for results.",
+        default=f"{cwd}/results",
+    )
     args = parser.parse_args()
     selected_algs = set(args.algorithms) if args.algorithms else None
+    inst_groups = args.inst_groups
+    opath = args.output
+    os.makedirs(opath, exist_ok=True)
+
+    #
+    # Summary across all instances
+    #
 
     hc = MultiInputSummary.from_inst_groups(inst_groups, "Hierarchy")
 
@@ -131,7 +152,7 @@ if __name__ == "__main__":
     )
     # count_df["avg_partner"] = count_df["WeightedSum"].apply(lambda x: -log2(x))
     score_df.sort_values(by=["Instance", "Gene", "Sign", "Algorithm"], inplace=True)
-    score_df.to_csv(f"{cwd}/control_score.csv", index=False)
+    score_df.to_csv(f"{opath}/control_score.csv", index=False)
 
     def make_wide_by_gene(df_inst, score_col="WeightedSum"):
         """
@@ -187,6 +208,7 @@ if __name__ == "__main__":
             )
 
     # ---- plotting: one figure per Instance, subplots per Gene + one summary ----
+    os.makedirs(f"{opath}/fig_score", exist_ok=True)
     for inst, sub_df in score_df.groupby("Instance"):
         wide = make_wide_by_gene(sub_df, score_col="WeightedSum")
 
@@ -264,7 +286,7 @@ if __name__ == "__main__":
 
         fig.suptitle(f"Instance={inst}", y=0.995, fontsize=12)
         plt.tight_layout()
-        plt.savefig(f"{cwd}/fig_score_full_{inst}.png", dpi=200, bbox_inches="tight")
+        plt.savefig(f"{opath}/fig_score/{inst}_full.png", dpi=200, bbox_inches="tight")
         plt.close(fig)
 
         # Compute the two summaries
@@ -365,5 +387,7 @@ if __name__ == "__main__":
 
         fig_s.suptitle(f"Instance={inst} — Summary", y=0.98, fontsize=12)
         plt.tight_layout()
-        plt.savefig(f"{cwd}/fig_score_summary_{inst}.png", dpi=200, bbox_inches="tight")
+        plt.savefig(
+            f"{opath}/fig_score/{inst}_summary.png", dpi=200, bbox_inches="tight"
+        )
         plt.close(fig_s)
