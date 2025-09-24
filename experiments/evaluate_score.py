@@ -43,11 +43,6 @@ def _compute_figsize_grid(n_bars: int, rows: int, cols: int, panel_h_in: float =
     return fig_w, fig_h
 
 
-inst_groups = [
-    result_dir.replace("instances", "results")
-    for result_dir in [insts_practical, insts_ce]
-]
-
 if __name__ == "__main__":
     # Command-line args
     parser = argparse.ArgumentParser(description="Compute/plot control scores.")
@@ -64,7 +59,7 @@ if __name__ == "__main__":
         "--inst_groups",
         nargs="+",
         help="Instance groups to include. Default: all.",
-        default=inst_groups,
+        default=[insts_practical, insts_ce],
     )
     parser.add_argument(
         "-o",
@@ -74,7 +69,9 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     selected_algs = set(args.algorithms) if args.algorithms else None
-    inst_groups = args.inst_groups
+    inst_groups = [
+        result_dir.replace("instances", "results") for result_dir in args.inst_groups
+    ]
     opath = args.output
     os.makedirs(opath, exist_ok=True)
 
