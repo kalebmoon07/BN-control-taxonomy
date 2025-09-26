@@ -1,19 +1,27 @@
+#!/usr/bin/env python3
+"""
+Evaluate and plot control scores for Boolean network control experiments.
+Usage:
+    python experiments/evaluate_score.py [options]
+"""
 import argparse
 import math
 import sys
-from bntaxonomy.hierarchy import MultiInputSummary
 import os
-from automate_test import insts_practical, insts_ce
-import pandas as pd
+from collections import OrderedDict
 
-from bntaxonomy.hierarchy import MultiInputSummary
+import pandas as pd
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-cwd = os.path.dirname(os.path.abspath(__file__))
+from bntaxonomy.hierarchy import MultiInputSummary
+from automate_test import insts_practical, insts_ce
 
-# --- Visual constants to keep bar/pad uniform across inputs (inches) ---
-# Tweak to taste; these are physical sizes, so results stay visually consistent.
+
+# ---------------------------------------------------------------------
+# Visual constants (inches) — keep bars/pads uniform across inputs
+# ---------------------------------------------------------------------
 BAR_W_IN = 0.22  # width of each bar (inches)
 GAP_IN = 0.12  # gap between neighboring bars (inches)
 MARGIN_LR_IN = 0.6  # left/right figure margins (inches)
@@ -21,13 +29,16 @@ MARGIN_TB_IN = 0.6  # top/bottom figure margins (inches)
 WSPACE_IN = 0.35  # inter-subplot horizontal spacing (inches)
 HSPACE_IN = 0.45  # inter-subplot vertical spacing (inches)
 
+SIGN_COLORS = {1: "tab:blue", 0: "tab:red"}
+SIGN_NAME = {1: "Positive", 0: "Negative"}
 
-def _slot_in():
+
+def _slot_in() -> float:
     """One x-slot = one bar + one gap, in inches."""
     return BAR_W_IN + GAP_IN
 
 
-def _bar_width_frac():
+def _bar_width_frac() -> float:
     """Bar width in data-units when 1 x-unit == one slot."""
     return BAR_W_IN / (BAR_W_IN + GAP_IN)
 
@@ -37,14 +48,75 @@ def _compute_figsize_grid(n_bars: int, rows: int, cols: int, panel_h_in: float =
     For a grid of subplots where each panel has the same number of bars (n_bars),
     compute a figure size that keeps bar/gap widths constant in inches.
     """
-    content_w_in = n_bars * _slot_in()
+    content_w_in = max(1, n_bars) * _slot_in()
     fig_w = (cols * content_w_in) + (cols - 1) * WSPACE_IN + 2 * MARGIN_LR_IN
     fig_h = (rows * panel_h_in) + (rows - 1) * HSPACE_IN + 2 * MARGIN_TB_IN
     return fig_w, fig_h
 
 
-if __name__ == "__main__":
-    # Command-line args
+# ---------------------------------------------------------------------
+# Plot helpers
+# ---------------------------------------------------------------------
+def annotate_bars(ax, bars, fmt="{:.2f}", dy=0.01):
+    """
+    Put value labels at the end of each bar.
+    - For positive bars, slightly above top.
+    - For negative bars, slightly below top (which is a negative number).
+    """
+    y0, y1 = ax.get_ylim()
+    offset = dy * (y1 - y0)
+
+    for b in bars:
+        h = b.get_height()
+        if not h:  # skip zero-height bars
+            continue
+        x = b.get_x() + b.get_width() / 2.0
+        y = b.get_y() + h
+        va = "bottom" if h > 0 else "top"
+        yo = offset if h > 0 else -offset
+        ax.text(x, y + yo, fmt.format(abs(h)), ha="center", va=va, fontsize=8)
+
+
+def sort_by_lex_score(df_inst: pd.DataFrame):
+    # collapse to one row per (Gene, Sign)
+    g: pd.DataFrame = (
+        df_inst.reset_index()
+        .groupby(["Gene", "Sign"], as_index=False, observed=True)["score"]
+        .sum()
+    )
+
+    # wide form with separate positive/negative columns
+    wide = g.pivot(index="Gene", columns="Sign", values="score").fillna(0.0)
+    wide = wide.rename(columns={1: "pos", 0: "neg_raw"})
+    wide["neg"] = wide["neg_raw"].abs()
+    wide["total"] = wide["pos"] + wide["neg"]
+
+    # final sort: primary by total (desc), secondary by positive (desc)
+    gene_sorted = wide.sort_values(
+        by=["total", "pos"], ascending=[False, False], kind="mergesort"
+    ).index.to_list()
+    return gene_sorted
+
+
+def layout_single_axes(fig_w_in: float, fig_h_in: float):
+    """Return (fig, ax) for a single-axes figure with inch-based margins applied."""
+    fig, ax = plt.subplots(1, 1, figsize=(fig_w_in, fig_h_in))
+    fig.subplots_adjust(
+        left=MARGIN_LR_IN / fig_w_in,
+        right=1 - MARGIN_LR_IN / fig_w_in,
+        top=1 - MARGIN_TB_IN / fig_h_in,
+        bottom=MARGIN_TB_IN / fig_h_in,
+        wspace=0,
+    )
+    return fig, ax
+
+
+# ---------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------
+def main(argv=None):
+    cwd = os.path.dirname(os.path.abspath(__file__))
+
     parser = argparse.ArgumentParser(description="Compute/plot control scores.")
     parser.add_argument(
         "-a",
@@ -65,167 +137,219 @@ if __name__ == "__main__":
         "-o",
         "--output",
         help="Output directory for results.",
-        default=f"{cwd}/results",
+        default=f"{cwd}/results/fig_score",
     )
-    args = parser.parse_args()
-    selected_algs = set(args.algorithms) if args.algorithms else None
-    inst_groups = [
-        result_dir.replace("instances", "results") for result_dir in args.inst_groups
-    ]
+    parser.add_argument(
+        "-g",
+        "--genes",
+        nargs="+",
+        help=(
+            "Optional list of genes to evaluate and plot. \n"
+            "Only these genes will be included, and they will appear in the exact order given."
+        ),
+        default=None,
+    )
+    args = parser.parse_args(argv)
+
+    if args.genes:
+        selected_gene_order = list(dict.fromkeys(args.genes))
+    else:
+        selected_gene_order = None
+
+    # selected_algs = set(args.algorithms) if args.algorithms else None
+    inst_groups = [p.replace("instances", "results") for p in args.inst_groups]
+
+    os.makedirs(args.output, exist_ok=True)
     opath = args.output
-    os.makedirs(opath, exist_ok=True)
 
-    #
-    # Summary across all instances
-    #
-
+    # -----------------------------------------------------------------
+    # Summaries from experiment groups
+    # -----------------------------------------------------------------
     hc = MultiInputSummary.from_inst_groups(inst_groups, "Hierarchy")
 
-    # If user requested a subset, warn about any that don't exist in results
-    if selected_algs is not None:
-        available_algs = {
-            alg_result.name for exp in hc.exp_list for alg_result in exp.results
-        }
-        missing = selected_algs - available_algs
-        for m in sorted(missing):
+    if args.algorithms:
+        available = {r.name for e in hc.exp_list for r in e.results}
+        missing = [a for a in args.algorithms if a not in available]
+        for m in missing:
             print(
-                f"Warning: algorithm '{m}' not found in results for {inst_groups}; skipping.",
+                f"Warning: algorithm '{m}' not found in {inst_groups}; skipping.",
                 file=sys.stderr,
             )
-        # Remove missing so the filter below can be a simple membership check
-        selected_algs &= available_algs
+        # keep only those present, in the original order
+        selected_algs = [a for a in args.algorithms if a in available]
+    else:
+        selected_algs = None
+    cat_type = pd.CategoricalDtype(selected_algs, ordered=True)
 
-    count_list: list[tuple[str, str, str, int, float]] = []
-    """inst_name, alg_name, gene, sign, n, score"""
-
+    # Build records (tight inner loops with local bindings for speed)
+    count_list = []  # (Instance, Algorithm, BN_size, ControlSize, Genes)
+    gene_ctrl_list = (
+        []
+    )  # (Instance, Algorithm, Gene, Sign, BN_size, ControlSize, Partners)
     for exp in hc.exp_list:
-        # Instance name
         inst_name = exp.name
-        n = len(exp.bn)  # number of nodes in the BN
+        n_nodes = len(exp.bn)
+        bn_keys = tuple(exp.bn.keys())  # stable order once
 
         for alg_result in exp.results:
-            # item: CtrlResult for one method
             alg_name = alg_result.name
-            # Filter out algorithms not requested (if a subset was provided)
             if selected_algs is not None and alg_name not in selected_algs:
                 continue
+
+            if not alg_result.d_list:
+                count_list.append((inst_name, alg_name, n_nodes, math.inf, dict()))
+
+            ctrl_set = set()
             for ctrl_dict in alg_result.d_list:
-                # ctrl_dict: one control strategy
-                for gene, value in ctrl_dict.items():
-                    count_list.append(
-                        (
-                            inst_name,
-                            alg_result.name,
-                            gene,
-                            value,
-                            n,
-                            len(ctrl_dict),
-                        )
+                genes = list(ctrl_dict.keys())
+                csize = len(ctrl_dict)
+                count_list.append((inst_name, alg_name, n_nodes, csize, ctrl_dict))
+
+                # partner tuples are sorted to be hash-stable
+                for gene, val in ctrl_dict.items():
+                    ctrl_set.add((gene, val))
+                    partners = tuple(sorted(g for g in genes if g != gene))
+                    gene_ctrl_list.append(
+                        (inst_name, alg_name, gene, val, n_nodes, csize, partners)
                     )
-    # print(count_list)
-    score_df = pd.DataFrame(
-        count_list,
-        columns=["Instance", "Algorithm", "Gene", "Sign", "BN_size", "Score"],
+
+            # Fill missing (gene, sign) with ControlSize=-1
+            for gene in bn_keys:
+                for sign in (0, 1):
+                    if (gene, sign) not in ctrl_set:
+                        gene_ctrl_list.append(
+                            (inst_name, alg_name, gene, sign, n_nodes, -1, ())
+                        )
+
+    # -----------------------------------------------------------------
+    # Histogram (per Instance)
+    # NOTE: Histogram keeps overall control-size counts after filtering control sets
+    #       to the selected genes (if provided).
+    # -----------------------------------------------------------------
+    count_df = pd.DataFrame(
+        count_list, columns=["Instance", "Algorithm", "BN_size", "ControlSize", "Genes"]
     )
-    score_df: pd.DataFrame = (
-        score_df.groupby(["Instance", "Algorithm", "Gene", "Sign", "BN_size"])
-        .agg(
-            List=pd.NamedAgg(column="Score", aggfunc=lambda x: list(x)),
-            Count=pd.NamedAgg(column="Score", aggfunc="count"),
-            AvgSize=pd.NamedAgg(column="Score", aggfunc=lambda x: sum(x) / (len(x))),
-        )
-        .reset_index()
-    )
-    # count_df["Score"] = count_df[["List","BN_size"]].apply(lambda x: sum(x))
-    score_df["WeightedSum"] = score_df.apply(
-        lambda row: sum(1 / ((row["BN_size"]) ** (x - 1)) for x in row["List"]), axis=1
-    )
-    score_df["WeightedSumHalf"] = score_df.apply(
-        lambda row: sum(1 / ((row["BN_size"] / 2) ** (x - 1)) for x in row["List"]),
-        axis=1,
-    )
-    score_df["WeightedSum2Based"] = score_df.apply(
-        lambda row: sum(1 / (2 ** (x - 1)) for x in row["List"]), axis=1
-    )
-    # count_df["avg_partner"] = count_df["WeightedSum"].apply(lambda x: -log2(x))
-    score_df.sort_values(by=["Instance", "Gene", "Sign", "Algorithm"], inplace=True)
-    score_df.to_csv(f"{opath}/control_score.csv", index=False)
+    if selected_algs:
+        count_df["Algorithm"] = count_df["Algorithm"].astype(cat_type)
+    count_df.to_csv(f"{opath}/count_control.csv", index=False)
 
-    def make_wide_by_gene(df_inst, score_col="WeightedSum"):
-        """
-        From rows for a single Instance, aggregate <score_col> across BN_size and
-        return a wide table indexed by (Gene, Algorithm) with columns:
-        - 'pos'  = value for Sign=1  (as-is)
-        - 'neg'  = negated value for Sign=0  (so it's <= 0)
-        Missing Algorithms are filled with 0.
-        """
-        agg = df_inst.groupby(["Gene", "Algorithm", "Sign"], as_index=False)[
-            score_col
-        ].sum()
+    for inst, sub_df in count_df.groupby("Instance", sort=False):
+        ct1 = pd.crosstab(sub_df["Algorithm"], sub_df["ControlSize"]).sort_index()
+        # Ensure columns for both control sizes exist (1, 2)
+        full_sizes = [1, 2]
+        ct1 = ct1.reindex(columns=full_sizes, fill_value=0)
 
-        wide = agg.pivot_table(
-            index=["Gene", "Algorithm"],
-            columns="Sign",
-            values=score_col,
-            aggfunc="sum",
-            fill_value=0.0,
-        )
+        algs = ct1.index.to_list()
+        sizes = full_sizes
 
-        for s in (0, 1):
-            if s not in wide.columns:
-                wide[s] = 0.0
+        x = np.arange(len(algs))
+        total_width = 0.8
+        bar_w = total_width / len(sizes)
+        offsets = (np.arange(len(sizes)) - (len(sizes) - 1) / 2.0) * bar_w
 
-        wide = wide.rename(columns={1: "pos", 0: "neg_raw"})
-        wide["neg"] = -wide["neg_raw"]  # make neg <= 0
-        wide = wide.drop(columns=["neg_raw"]).sort_index()
-
-        return wide
-
-    def annotate_bars(ax, bars, fmt="{:.2f}", dy=0.01):
-        """
-        Put value labels at the end of each bar.
-        - For positive bars, slightly above top.
-        - For negative bars, slightly below top (which is a negative number).
-        """
-        ylims = ax.get_ylim()
-        span = ylims[1] - ylims[0]
-        offset = dy * span
-
-        for b in bars:
-            h = b.get_height()
-            if h == 0:
-                continue
-            x = b.get_x() + b.get_width() / 2.0
-            y = b.get_y() + h
-            # choose vertical offset based on sign of bar
-            va = "bottom" if h > 0 else "top"
-            yo = offset if h > 0 else -offset
-            ax.text(
-                x, y + yo, fmt.format(h), ha="center", va=va, fontsize=8, rotation=0
+        fig, ax = plt.subplots(figsize=(14, 5))
+        for i, cs in enumerate(sizes):
+            heights = ct1[cs].to_numpy()
+            rects = ax.bar(
+                x + offsets[i], heights, width=bar_w, label=str(cs), alpha=0.85
             )
 
-    # ---- plotting: one figure per Instance, subplots per Gene + one summary ----
-    os.makedirs(f"{opath}/fig_score", exist_ok=True)
-    for inst, sub_df in score_df.groupby("Instance"):
-        wide = make_wide_by_gene(sub_df, score_col="WeightedSum")
+            # label every bar, including zeros (slight offset so zeros are visible)
+            for r, val in zip(rects, heights):
+                ax.annotate(
+                    str(int(val)),
+                    xy=(r.get_x() + r.get_width() / 2, r.get_height()),
+                    xytext=(0, 3),
+                    textcoords="offset points",
+                    ha="center",
+                    va="bottom",
+                    clip_on=False,
+                )
 
-        genes = list(
-            dict.fromkeys(wide.index.get_level_values("Gene"))
-        )  # preserve order
-        algs_all = sorted(sub_df["Algorithm"].unique())  # consistent x
-        m = len(genes)
+        ax.set_xticks(x, algs, rotation=45)
+        ax.grid(True, axis="y", alpha=0.25)
+        ax.legend(title="ControlSize", loc="center left", bbox_to_anchor=(1.01, 0.5))
+        ax.set_ylim(0, max(1, int(ct1.to_numpy().max())) * 1.15)  # headroom for labels)
+        plt.subplots_adjust(bottom=0.22, right=0.85)
 
-        # total panels = per-gene panels + 1 summary panel
+        fig.savefig(f"{opath}/{inst}_histogram.png", dpi=200, bbox_inches="tight")
+        plt.close(fig)
+
+    # -----------------------------------------------------------------
+    # Score calculations
+    # -----------------------------------------------------------------
+    score_df = pd.DataFrame(
+        gene_ctrl_list,
+        columns=[
+            "Instance",
+            "Algorithm",
+            "Gene",
+            "Sign",
+            "BN_size",
+            "ControlSize",
+            "Partners",
+        ],
+    )
+    score_df.drop_duplicates(
+        ["Instance", "Algorithm", "Gene", "Sign", "Partners"], inplace=True
+    )
+    if selected_algs:
+        score_df["Algorithm"] = score_df["Algorithm"].astype(cat_type)
+
+    def compute_score(row):
+        if row["ControlSize"] == -1:
+            return 0.0
+        if row["ControlSize"] == 0:
+            return 1.0
+        else:
+            score = 1 / math.comb(row["BN_size"] - 1, row["ControlSize"] - 1)
+            return score if row["Sign"] == 1 else -score
+
+    score_df["score"] = score_df.apply(compute_score, axis=1).fillna(0.0)
+    score_df.to_csv(f"{opath}/score_gene_level.csv", index=False)
+
+    # -----------------------------------------------------------------
+    # Plotting: per-Instance grids (one panel per gene)
+    # -----------------------------------------------------------------
+    width_frac = _bar_width_frac()
+
+    for inst, sub_df in score_df.groupby("Instance", sort=False):
+        sub_df: pd.DataFrame = sub_df.groupby(
+            ["Algorithm", "Gene", "Sign"], as_index=False, observed=True
+        )["score"].sum()
+
+        algs_all = sub_df["Algorithm"].unique()
+        # Determine order for this instance
+        if selected_gene_order is not None:
+            genes_order = [
+                g for g in selected_gene_order if g in sub_df["Gene"].unique()
+            ]
+        else:
+            genes_order = sub_df["Gene"].unique()
+        sub_df = sub_df[sub_df["Gene"].isin(genes_order)]
+        if not len(genes_order):
+            print(f"[Instance={inst}] No genes to plot, skipping.", file=sys.stderr)
+            continue
+        # Apply categorical ordering for stable groupby/sort
+        sub_df["Gene"] = pd.Categorical(
+            sub_df["Gene"], categories=genes_order, ordered=True
+        )
+        sub_df = sub_df.sort_values(["Gene", "Sign", "Algorithm"])
+
+        m = len(genes_order)
+
         total = m
-        cols = math.ceil(math.sqrt(total))
-        rows = math.ceil(total / cols)
+        if m <= 3:
+            rows, cols = 1, m
+        else:
+            cols = max(1, int(math.ceil(math.sqrt(total))))
+            rows = int(math.ceil(total / cols))
 
-        # --- figure size derived from desired physical bar/pad sizes ---
+        # Figure size derived from desired physical bar/pad sizes
         fig_w, fig_h = _compute_figsize_grid(len(algs_all), rows, cols, panel_h_in=3.6)
         fig, axes = plt.subplots(
             rows, cols, figsize=(fig_w, fig_h), sharex=False, sharey=True
         )
-
         axes = np.array(axes).reshape(-1)
 
         # Convert inch spacings into figure-fractions for precise layout
@@ -237,154 +361,89 @@ if __name__ == "__main__":
             wspace=(WSPACE_IN / (len(algs_all) * _slot_in())) if cols > 1 else 0.2,
             hspace=(HSPACE_IN / 3.6) if rows > 1 else 0.25,
         )
+        sub_df.to_clipboard()
 
-        # Width in data units so that each bar maps to BAR_W_IN inches
-        width = _bar_width_frac()
-
-        # ---- per-gene panels ----
-        for i, gene in enumerate(genes):
-            ax = axes[i]
-
-            g = (
-                wide.loc[gene]
-                if gene in wide.index.get_level_values("Gene")
-                else wide.iloc[0:0]
-            )
-            g = g.reindex(algs_all, fill_value=0.0)
-
-            # Place each bar in a 1.0-wide slot: centers at 0.5, 1.5, ...
+        # Per-gene panels
+        for i, (gene, g) in enumerate(
+            sub_df.groupby("Gene", sort=True, observed=False)
+        ):
+            ax: plt.Axes = axes[i]
+            g = g.set_index("Sign")
             n_bars = len(algs_all)
-            x = np.arange(n_bars) + 0.5
-            ax.set_xlim(0, n_bars)  # ensures 1 data unit == one (bar+gap) slot
+            x = np.arange(n_bars) + 0.5  # centers at 0.5, 1.5, ...
+            ax.set_xlim(0, n_bars)  # 1 data unit == one (bar+gap) slot
+            for s in (0, 1):
+                bar = ax.bar(
+                    x, g.loc[s, "score"], width_frac, color=SIGN_COLORS[s], alpha=0.85
+                )
+                annotate_bars(ax, bar, fmt="{:.2f}")
 
-            bars_pos = ax.bar(x, g["pos"].to_numpy(), width, label="Positive")
-            bars_neg = ax.bar(x, g["neg"].to_numpy(), width, label="Negative")
-
-            ymax, ymin = 1.0, -1.0
-            pad = 0.1 * (ymax - ymin + 1e-9)
-            ax.set_ylim(ymin - pad, ymax + pad)
+            # symmetric y-limit with padding
+            ax.set_ylim(-1.1, 1.1)
 
             ax.axhline(0, linewidth=1)
-            ax.set_title(f"Gene={gene}")
-            ax.set_ylabel("Score (sum 1/n^{|C|-1})")
+            ax.set_title(f"{gene}")
+            ax.set_ylabel("Score")
             ax.set_xticks(x, algs_all, rotation=45, ha="right")
             ax.grid(axis="y", alpha=0.3)
 
-            # annotate values
-            annotate_bars(ax, bars_pos, fmt="{:.2f}")
-            annotate_bars(ax, bars_neg, fmt="{:.2f}")
-
-            if i == 0:
-                ax.legend()
-
-        # hide any unused axes
+        # Hide any unused axes
         for j in range(total, len(axes)):
             axes[j].set_visible(False)
 
         fig.suptitle(f"Instance={inst}", y=0.995, fontsize=12)
         plt.tight_layout()
-        plt.savefig(f"{opath}/fig_score/{inst}_full.png", dpi=200, bbox_inches="tight")
+        plt.savefig(f"{opath}/{inst}_full.png", dpi=200, bbox_inches="tight")
         plt.close(fig)
 
-        # Compute the two summaries
-        sum_by_alg = (
-            wide.reset_index()
-            .groupby("Algorithm", as_index=True)[["pos", "neg"]]
-            .sum()
-            .reindex(algs_all, fill_value=0.0)
-        )
-        sum_by_alg["total"] = sum_by_alg["pos"] + sum_by_alg["neg"].abs()
-        sum_by_alg = sum_by_alg.sort_values(by="total", ascending=False)
+        # -----------------------------------------------------------------
+        # Summary-only (average over algorithms, 1 row figure)
+        # -----------------------------------------------------------------
+
         sum_by_gene = (
-            wide.reset_index()
-            .groupby("Gene", as_index=True)[["pos", "neg"]]
-            .sum()
-            .reindex(genes, fill_value=0.0)
-        )
-        sum_by_gene["total"] = sum_by_gene["pos"] + sum_by_gene["neg"].abs()
-        sum_by_gene = sum_by_gene.sort_values(by="total", ascending=False)
-
-        y_max = max(
-            sum_by_alg["pos"].max(),
-            sum_by_alg["neg"].abs().max(),
-            sum_by_gene["pos"].max(),
-            sum_by_gene["neg"].abs().max(),
+            sub_df.groupby(["Gene", "Sign"], observed=True)["score"]
+            .mean()
+            .reset_index()
         )
 
-        # ---- new figure with summary blocks only ----
-        width = _bar_width_frac()
+        gene_sorted = sort_by_lex_score(sub_df)
+        sum_by_gene["Gene"] = pd.Categorical(
+            sum_by_gene["Gene"], categories=gene_sorted, ordered=True
+        )
+        sum_by_gene = sum_by_gene.sort_values("Gene")
+        sum_by_gene = sum_by_gene.set_index("Sign")
 
-        # Compute a figure width that keeps bars & gaps constant on both axes
-        n_alg = len(algs_all)
-        n_gene = len(genes)
-        content_alg_w = max(1, n_alg) * _slot_in()
+        n_gene = len(genes_order)
         content_gene_w = max(1, n_gene) * _slot_in()
-        fig_w_s = content_alg_w + content_gene_w + WSPACE_IN + 2 * MARGIN_LR_IN
+        fig_w_s = content_gene_w + 2 * MARGIN_LR_IN
         fig_h_s = 6
 
-        fig_s, (ax_sum_alg, ax_sum_gene) = plt.subplots(
-            1,
-            2,
-            figsize=(fig_w_s, fig_h_s),
-            gridspec_kw={"width_ratios": [content_alg_w, content_gene_w]},
-            sharey=False,
-        )
-        fig_s.subplots_adjust(
-            left=MARGIN_LR_IN / fig_w_s,
-            right=1 - MARGIN_LR_IN / fig_w_s,
-            top=1 - MARGIN_TB_IN / fig_h_s,
-            bottom=MARGIN_TB_IN / fig_h_s,
-            wspace=WSPACE_IN / (content_alg_w if content_alg_w > 0 else 1),
-        )
+        fig_s, ax_sum = layout_single_axes(fig_w_s, fig_h_s)
 
-        # Summary #1: Σ over genes per Algorithm
-        x = np.arange(n_alg) + 0.5
-        ax_sum_alg.set_xlim(0, n_alg)
-        bars_pos_s1 = ax_sum_alg.bar(
-            x, sum_by_alg["pos"].to_numpy(), width, label="Positive (Σ genes)"
-        )
-        bars_neg_s1 = ax_sum_alg.bar(
-            x, sum_by_alg["neg"].to_numpy(), width, label="Negative (Σ genes)"
-        )
-
-        pad = 0.1 * (y_max)
-        ax_sum_alg.set_ylim(-y_max - pad, y_max + pad)
-
-        ax_sum_alg.axhline(0, linewidth=1)
-        ax_sum_alg.set_title("Σ over genes")
-        ax_sum_alg.set_ylabel("Score (sum 1/n^{|C|-1})")
-        ax_sum_alg.set_xlabel("Algorithm")
-        ax_sum_alg.set_xticks(x, sum_by_alg.index, rotation=45, ha="right")
-        ax_sum_alg.grid(axis="y", alpha=0.3)
-        annotate_bars(ax_sum_alg, bars_pos_s1, fmt="{:.2f}")
-        annotate_bars(ax_sum_alg, bars_neg_s1, fmt="{:.2f}")
-        # ax_sum_alg.legend()
-
-        # Summary #2: Σ over algorithms per Gene
         xg = np.arange(n_gene) + 0.5
-        ax_sum_gene.set_xlim(0, n_gene)
-        bars_pos_s2 = ax_sum_gene.bar(
-            xg, sum_by_gene["pos"].to_numpy(), width, label="Positive (Σ algs)"
-        )
-        bars_neg_s2 = ax_sum_gene.bar(
-            xg, sum_by_gene["neg"].to_numpy(), width, label="Negative (Σ algs)"
-        )
+        ax_sum.set_xlim(0, n_gene)
+        for s in (0, 1):
+            bars = ax_sum.bar(
+                xg,
+                sum_by_gene.loc[s, "score"],
+                width_frac,
+                color=SIGN_COLORS[s],
+                alpha=0.85,
+            )
+            annotate_bars(ax_sum, bars, fmt="{:.2f}")
 
-        ax_sum_gene.set_ylim(-y_max - pad, y_max + pad)
-
-        ax_sum_gene.axhline(0, linewidth=1)
-        ax_sum_gene.set_title("Σ over algorithms")
-        ax_sum_gene.set_ylabel("Score (sum 1/n^{|C|-1})")
-        ax_sum_gene.set_xlabel("Gene")
-        ax_sum_gene.set_xticks(xg, sum_by_gene.index, rotation=45, ha="right")
-        ax_sum_gene.grid(axis="y", alpha=0.3)
-        annotate_bars(ax_sum_gene, bars_pos_s2, fmt="{:.2f}")
-        annotate_bars(ax_sum_gene, bars_neg_s2, fmt="{:.2f}")
-        # ax_sum_gene.legend()
+        ax_sum.set_ylim(-1.1, 1.1)
+        ax_sum.axhline(0, linewidth=1)
+        ax_sum.set_title("Average over algorithms")
+        ax_sum.set_ylabel("Score")
+        ax_sum.set_xlabel("Gene")
+        ax_sum.set_xticks(xg, genes_order, rotation=45, ha="right")
+        ax_sum.grid(axis="y", alpha=0.3)
 
         fig_s.suptitle(f"Instance={inst} — Summary", y=0.98, fontsize=12)
-        plt.tight_layout()
-        plt.savefig(
-            f"{opath}/fig_score/{inst}_summary.png", dpi=200, bbox_inches="tight"
-        )
+        plt.savefig(f"{opath}/{inst}_summary.png", dpi=200, bbox_inches="tight")
         plt.close(fig_s)
+
+
+if __name__ == "__main__":
+    main()
