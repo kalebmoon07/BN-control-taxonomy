@@ -113,14 +113,6 @@ class ExperimentHandler:
 
         return self.postprocess(results)
 
-    ### Caspo
-    def ctrl_caspo_vpts(self, **kwargs):
-        from bntaxonomy.iface.caspo import ctrl_caspo_vpts_iface
-
-        return self.postprocess(
-            ctrl_caspo_vpts_iface(self.bn, self.target, self.max_size, **kwargs)
-        )
-
     def run_tools(self, filter_tools):
         for toolcls in registered_tools():
             if filter_tools and toolcls.name not in filter_tools:
