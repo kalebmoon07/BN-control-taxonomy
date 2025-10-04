@@ -1,8 +1,5 @@
-import os
-import tempfile
 from colomoto.minibn import BooleanNetwork
 import mpbn
-
 
 def propagate_bn(org_bnet: BooleanNetwork, inputs: dict[str, int]):
     print(f"Propagating with inputs {inputs}")
