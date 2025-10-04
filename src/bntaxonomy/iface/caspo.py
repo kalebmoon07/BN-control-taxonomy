@@ -1,15 +1,19 @@
+from bntaxonomy.iface import register_tool
+
 from colomoto.minibn import BooleanNetwork
 import caspo_control
 
-from bntaxonomy.utils.control import CtrlResult, refine_pert, suppress_console_output
+from bntaxonomy.utils.control import refine_pert
 from bntaxonomy.utils.log import time_check
 
+@register_tool
+class CaspoVPTS:
+    bn_type = "colomoto.BooleanNetwork"
 
-@time_check
-def ctrl_caspo_vpts_iface(
-    bn: BooleanNetwork, target: dict[str, int], max_size: int, **kwargs
-):
-    with suppress_console_output():
+    @time_check
+    @staticmethod
+    def run(bn: BooleanNetwork, max_size: int,
+            target: dict[str, int], exclude: list[str]):
         model = caspo_control.CaspoControl(bn, {})
-        s = model.reprogramming_to_attractor(target, maxsize=max_size, **kwargs)
-    return CtrlResult("Caspo", refine_pert(s))
+        s = model.reprogramming_to_attractor(target, maxsize=max_size)
+        return refine_pert(s)
