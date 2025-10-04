@@ -1,5 +1,6 @@
 from __future__ import annotations
-import json, os
+import json
+import os
 
 from colomoto.minibn import BooleanNetwork
 
@@ -11,6 +12,7 @@ from bntaxonomy.utils.control import suppress_console_output
 from bntaxonomy.iface import registered_tools
 
 class ExperimentHandler:
+    __next_id = 1
     def __init__(
         self,
         name: str,
@@ -66,6 +68,16 @@ class ExperimentHandler:
         self.primes = None
         self.cabean = None
 
+        self.expid = f"Experiment_{self.__next_id}_{id(self)}"
+        self.cachedir = os.path.join(self.input_path, "cache")
+        if not os.path.isdir(self.cachedir):
+            os.makedirs(self.cachedir)
+
+        self.bnet_file = os.path.join(self.cachedir, "model.bnet")
+        self.bn.save(self.bnet_file)
+
+        self.__class__.__next_id += 1
+
     def postprocess(self, ctrl_result: CtrlResult):
         ctrl_result.sort_d_list()
         if self.dump_full:
@@ -120,6 +132,7 @@ class ExperimentHandler:
 
             main_logger.info(f"Running {toolcls.name}")
             args = (self.expid, self.cachedir) if toolcls.uses_cache else ()
+
             if toolcls.bn_type == "bnet_file":
                 bninp = self.bnet_file
             elif toolcls.bn_type == "colomoto.BooleanNetwork":
@@ -156,32 +169,6 @@ class ExperimentHandler:
             with open(f"{self.input_path}/{PRIME_JSON_FILE}", "w") as _f:
                 json.dump(self.primes, _f)
 
-    def ctrl_pyboolnet_model_checking(self, update: str, **kwargs):
-        from bntaxonomy.iface.pbn import ctrl_pbn_attr_iface
-
-        assert update in ["synchronous", "asynchronous"]
-
-        self.make_primes()
-        results = ctrl_pbn_attr_iface(
-            self.primes, self.target, self.target, update, self.max_size, **kwargs
-        )
-        return self.postprocess(results)
-
-    def ctrl_pyboolnet_heuristics(self, control_type: str, **kwargs):
-        from bntaxonomy.iface.pbn import ctrl_pbn_heuristics_iface
-
-        assert control_type in ["percolation", "trap_spaces"]
-
-        self.make_primes()
-        results = ctrl_pbn_heuristics_iface(
-            self.primes,
-            self.target,
-            self.target,
-            control_type,
-            self.max_size,
-            **kwargs,
-        )
-        return self.postprocess(results)
 
     ### pystablemotifs
 

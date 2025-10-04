@@ -1,10 +1,9 @@
 from bntaxonomy.iface import register_tool
+from bntaxonomy.utils.control import refine_pert
+from bntaxonomy.utils.log import time_check
 
 from colomoto.minibn import BooleanNetwork
 import caspo_control
-
-from bntaxonomy.utils.control import refine_pert
-from bntaxonomy.utils.log import time_check
 
 @register_tool
 class CaspoVPTS:
