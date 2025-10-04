@@ -6,6 +6,7 @@ from actonet import ActoNet
 
 @register_tool
 class ActoNetFP:
+    name = "ActoNet"
     bn_type = "colomoto.BooleanNetwork"
 
     @time_check

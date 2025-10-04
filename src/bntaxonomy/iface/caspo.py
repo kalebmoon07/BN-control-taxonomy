@@ -7,6 +7,7 @@ import caspo_control
 
 @register_tool
 class CaspoVPTS:
+    name = "Caspo"
     bn_type = "colomoto.BooleanNetwork"
 
     @time_check

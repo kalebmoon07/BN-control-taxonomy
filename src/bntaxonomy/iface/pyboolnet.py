@@ -802,10 +802,12 @@ class PyBoolNet_ModelChecking:
 
 @register_tool
 class PyBoolNet_ModelChecking_SA(PyBoolNet_ModelChecking):
+    name = "PBN[SA]"
     update = "synchronous"
 
 @register_tool
 class PyBoolNet_ModelChecking_ASA(PyBoolNet_ModelChecking):
+    name = "PBN[ASA]"
     update = "asynchronous"
 
 
@@ -836,8 +838,10 @@ class PyBoolNet_Heuristic:
 
 @register_tool
 class PyBoolNet_Percolation(PyBoolNet_Heuristic):
+    name = "PBN[percolation]"
     control_type = "percolation"
 
 @register_tool
 class PyBoolNet_Trapspaces(PyBoolNet_Heuristic):
+    name = "PBN[trap_spaces]"
     control_type = "trap_spaces"
