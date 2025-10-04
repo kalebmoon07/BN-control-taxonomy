@@ -6,8 +6,9 @@ from colomoto.minibn import BooleanNetwork
 from bntaxonomy.utils.control import CtrlResult
 from bntaxonomy.utils.log import main_logger
 import bntaxonomy.utils.log as log_utils
-from bntaxonomy.iface import registered_tools
+from bntaxonomy.utils.control import suppress_console_output
 
+from bntaxonomy.iface import registered_tools
 
 class ExperimentHandler:
     def __init__(
@@ -54,8 +55,11 @@ class ExperimentHandler:
             from bntaxonomy.iface.mpbn import propagate_bn
 
             self.bn, self.bnet_fname = propagate_bn(self.org_bnet, self.inputs)
+            self.inputs = {}
         else:
             self.bn, self.bnet_fname = self.org_bnet, self.bnet_fname
+            self.bn |= self.inputs
+            self.inputs = {}
 
         self.primes = None
         self.sm_attrs = None
@@ -136,8 +140,9 @@ class ExperimentHandler:
                 bninp = self.bn
             else:
                 raise TypeError(f"{toolcls.name}: Unknown BN type input {toolcls.bn_type}")
-            res = toolcls.run(bninp, self.max_size, self.target, self.exclude,
-                                *args)
+            with suppress_console_output():
+                res = toolcls.run(bninp, self.max_size, self.target,
+                                    self.exclude, *args)
             res = CtrlResult(toolcls.name, res)
             self.postprocess(res)
 
