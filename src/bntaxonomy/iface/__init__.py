@@ -27,6 +27,8 @@ def registered_tools():
 def register_tool(toolcls):
     if not hasattr(toolcls, "uses_cache"):
         toolcls.uses_cache = False
+    if not hasattr(toolcls, "name"):
+        toolcls.name = toolcls.__name__
     __TOOLS.append(toolcls)
     main_logger.info(f"Registered tool {toolcls.name}")
     return toolcls
