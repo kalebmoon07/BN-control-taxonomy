@@ -1,23 +1,17 @@
-import functools
-from actonet import ActoNet
-from colomoto.minibn import BooleanNetwork
-
-from bntaxonomy.utils.control import CtrlResult, suppress_console_output, refine_pert
+from bntaxonomy.iface import register_tool
+from bntaxonomy.utils.control import CtrlResult, refine_pert
 from bntaxonomy.utils.log import time_check
 
-
-class myActoNet(ActoNet):
-    def __init__(self, bn: BooleanNetwork, inputs=dict()):
-        super().__init__(bn, inputs)
-        # a fixpoint need not exist; if a control induces no fixpoint, it is a valid control
-        self.controls = functools.partial(self.controls, existential=False)
+from actonet import ActoNet
 
 
-@time_check
-def ctrl_actonet_fp_iface(
-    bn: BooleanNetwork, target: dict[str, int], max_size: int, **kwargs
-):
-    with suppress_console_output():
-        model = myActoNet(bn)
-        s = model.reprogramming_fixpoints(target, maxsize=max_size, **kwargs)
-    return CtrlResult("ActoNet", refine_pert(s))
+@register_tool
+class ActoNet:
+    bn_type = "colomoto.BooleanNetwork"
+
+    @time_check
+    @staticmethod
+    def run(bn, max_size, target, exclude, inputs={}):
+        a = ActoNet(bn, inputs)
+        r = a.reprogramming_fixpoints(target, maxsize=max_size, ignore=exclude)
+        return refine_pert(r)

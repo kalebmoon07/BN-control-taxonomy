@@ -88,12 +88,6 @@ class ExperimentHandler:
             os.remove("program_instance.asp")
         return ctrl_result
 
-    ### ActoNet
-    def ctrl_actonet_fp(self, **kwargs):
-        from bntaxonomy.iface.actonet import ctrl_actonet_fp_iface
-
-        results = ctrl_actonet_fp_iface(self.bn, self.target, self.max_size, **kwargs)
-        return self.postprocess(results)
 
     ### optboolnet
 
