@@ -55,20 +55,13 @@ class ExperimentHandler:
         # Load the Boolean network for experiments
         if use_propagated:
             from bntaxonomy.iface.mpbn import propagate_bn
-
-            self.bn, self.bnet_fname = propagate_bn(self.org_bnet, self.inputs)
+            self.bn = propagate_bn(self.org_bnet, self.inputs)
             self.inputs = {}
         else:
-            self.bn, self.bnet_fname = self.org_bnet, self.bnet_fname
+            self.bn = self.org_bnet
             self.bn |= self.inputs
             self.inputs = {}
 
-        self.primes = None
-        self.sm_attrs = None
-        self.primes = None
-        self.cabean = None
-
-        self.expid = f"Experiment_{self.__next_id}_{id(self)}"
         self.cachedir = os.path.join(self.input_path, "cache")
         if not os.path.isdir(self.cachedir):
             os.makedirs(self.cachedir)
@@ -76,7 +69,13 @@ class ExperimentHandler:
         self.bnet_file = os.path.join(self.cachedir, "model.bnet")
         self.bn.save(self.bnet_file)
 
+        self.expid = f"Experiment_{self.__next_id}_{id(self)}"
         self.__class__.__next_id += 1
+
+        self.sm_attrs = None
+        self.primes = None
+        self.cabean = None
+
 
     def postprocess(self, ctrl_result: CtrlResult):
         ctrl_result.sort_d_list()
