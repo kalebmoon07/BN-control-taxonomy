@@ -1,7 +1,4 @@
 from bntaxonomy.iface import register_tool
-from bntaxonomy.utils.log import main_logger
-
-from bntaxonomy.utils.control import suppress_console_output
 from bntaxonomy.utils.log import time_check
 
 import bonesis
@@ -19,9 +16,8 @@ class BoNesisFixedPoints:
     @time_check
     @staticmethod
     def run(bn, max_size, target, exclude):
-        with suppress_console_output():
-            return list(marker_reprogramming_fixpoints(bn, target, max_size,
-                                       exclude=exclude, at_least_one=False))
+        return list(marker_reprogramming_fixpoints(bn, target, max_size,
+                           exclude=exclude, at_least_one=False))
 
 @register_tool
 class BoNesisTrapSpaces:
@@ -31,6 +27,5 @@ class BoNesisTrapSpaces:
     @time_check
     @staticmethod
     def run(bn, max_size, target, exclude):
-        with suppress_console_output():
-            return list(marker_reprogramming(bn, target, max_size,
-                                             exclude=exclude))
+        return list(marker_reprogramming(bn, target, max_size,
+                                         exclude=exclude))
