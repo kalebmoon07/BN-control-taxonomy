@@ -139,8 +139,8 @@ class SM_BruteForce(_SM_Base):
 class _SM_TrapSpaceBase(_SM_Base):
     """
     Trap-space reprogramming via AttractorRepertoire.reprogram_to_trap_spaces.
-    In this package, we only use option target_method="merge" (option "history" gives sequential controls).
-    driver_method can be "minimal" or "internal".
+    - In this package, we only use option `target_method`= `merge` (option `history` gives sequential controls).
+    - `driver_method` can be `minimal` or `internal`.
 
     """
 
