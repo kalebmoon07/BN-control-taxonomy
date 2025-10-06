@@ -90,20 +90,3 @@ def refine_pert(s: ReprogrammingStrategies):
             d[k] = int(v)
         d_list.append(d)
     return d_list
-
-
-def convert_minibn_perturbation_to_dict(
-    data: set[tuple[dict]],
-) -> list[dict[str, int]]:
-    result = []
-    for item in data:
-        # Each item is a tuple with one dict inside
-        if isinstance(item, tuple) and len(item) == 1:
-            inner = item[0]
-            if isinstance(inner, dict):
-                result.append(inner)
-            else:
-                raise ValueError(f"Expected a dict inside tuple, got {type(inner)}")
-        else:
-            raise ValueError(f"Expected a tuple of one element, got {item}")
-    return result
