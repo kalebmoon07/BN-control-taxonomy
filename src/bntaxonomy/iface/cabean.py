@@ -1,19 +1,25 @@
+import json
 import os
 import subprocess
 import tempfile
-from bntaxonomy.utils.control import CtrlResult
 from colomoto.minibn import BooleanNetwork
-import cabean
 from cabean import CabeanInstance, CabeanIface
 from cabean.iface import CabeanResult
 from colomoto.types import PartialState
 
 from bntaxonomy.utils.log import time_check, main_logger
+from bntaxonomy.iface import register_tool
 
+
+# --- constants ---
+# TODO: make the path valid after installation
 cabean_path = f"{os.path.dirname(os.path.abspath(__file__))}/../dep/cabean_2.0.0"
 
 CABEAN_OUT_MEMORY = "OUT_OF_MEMORY"
 ATTR_JSON_FILE = "cabean_attractors.json"
+
+# --- GLOBAL IN-MEMORY CACHE ---
+cache = dict()  # expid -> CabeanInstancePrecomputed
 
 
 class CabeanInstancePrecomputed(CabeanInstance):
@@ -24,7 +30,7 @@ class CabeanInstancePrecomputed(CabeanInstance):
             init.keys()
         ), "specified inputs are not input nodes of the Boolean network"
         self.iface = CabeanIface(bn, init=init)
-        # self.attractors = self.iface.attractors() # skip this line for the precomputed
+        # NOTE: Do not compute attractors here; we load/compute via cache helpers.
 
     @time_check
     def compute_attractors(self):
@@ -34,13 +40,69 @@ class CabeanInstancePrecomputed(CabeanInstance):
         self.attractors = attrs
 
 
-@time_check
-def make_cabean_iface(bn: BooleanNetwork):
-    main_logger.info("Loading cabean and computing attractors")
+# -------------------------------
+# Cache helpers
+# -------------------------------
+def _cabean_cache_file(cachedir: str) -> str:
+    return f"{cachedir}/{ATTR_JSON_FILE}" if cachedir else ""
+
+
+def _try_load_attractors(cachedir: str):
+    """
+    Try to load precomputed attractors from JSON cache.
+    Returns None if missing or failed.
+    """
+    cache_file = _cabean_cache_file(cachedir)
+    if not cache_file or not os.path.isfile(cache_file):
+        return None
     try:
-        return CabeanInstancePrecomputed(bn)
+        with open(cache_file) as _f:
+            attrs = json.load(_f)
+        main_logger.info("Loaded precomputed CABEAN attractors successfully")
+        return attrs
     except Exception as e:
-        main_logger.info(f"Error loading cabean: {e}")
+        main_logger.info(f"Loading precomputed CABEAN attractors failed: {e}")
+        return None
+
+
+def _save_attractors(attrs, cachedir: str):
+    """
+    Persist attractors to JSON cache (best-effort).
+    """
+    cache_file = _cabean_cache_file(cachedir)
+    if not cache_file:
+        return
+    try:
+        with open(cache_file, "w") as _f:
+            json.dump(attrs, _f)
+        main_logger.info("Wrote CABEAN attractors cache")
+    except Exception as e:
+        main_logger.info(f"Writing CABEAN attractors cache failed: {e}")
+
+
+@time_check
+def make_cabean_iface(
+    bn: BooleanNetwork, cachedir: str = ""
+) -> CabeanInstancePrecomputed | str:
+    """
+    Create a CabeanInstancePrecomputed and ensure `attractors` are loaded:
+      - If cached JSON exists, load and attach.
+      - Otherwise compute once and write to cache.
+    Returns CABEAN_OUT_MEMORY on failure (kept for compatibility).
+    """
+    main_logger.info("Loading CABEAN and preparing attractors (with cache)")
+    try:
+        inst = CabeanInstancePrecomputed(bn)
+        attrs = _try_load_attractors(cachedir)
+        if attrs is not None:
+            inst.load_precomputed_attr(attrs)
+        else:
+            inst.compute_attractors()
+            # Ensure JSON-serializable; most CabeanIface outputs are dict/list of dicts.
+            _save_attractors(inst.attractors, cachedir)
+        return inst
+    except Exception as e:
+        main_logger.info(f"Error loading CABEAN: {e}")
         return CABEAN_OUT_MEMORY
 
 
@@ -66,7 +128,6 @@ def ctrl_target_control_iface(
     _debug=False,
     **kwargs,
 ):
-
     cabean_target_fname, cabean_bn_fname = make_cabean_tempfiles(cabean_obj, target)
     cmd = [
         cabean_path,
@@ -122,4 +183,77 @@ def ctrl_target_control_iface(
                     node, value = c.split("=")
                     p[node] = int(value)
             ctrl_list.append(p)
-    return CtrlResult(f"CABEAN[{method}]", ctrl_list)
+    return ctrl_list
+
+
+# ---------------------------------
+# Runner class
+# ---------------------------------
+class CABEAN_TargetControlBase:
+    """
+    Mirrors the interface of PyBoolNet_* classes:
+      - uses_cache / bn_type attributes
+      - run(..., expid, cachedir)
+      - free_experiment(expid)
+    """
+
+    uses_cache = True
+    bn_type = "bnet_file"  # this runner expects a colomoto BooleanNetwork object
+
+    method = (
+        "node"  # default control method passed to cabean binary; override in subclasses
+    )
+
+    @classmethod
+    @time_check
+    def run(
+        cls,
+        bn: BooleanNetwork,
+        max_size: int,  # kept for API parity; CABEAN methods ignore it
+        target: dict,
+        exclude: list,  # not used by CABEAN CLI here; reserved for future
+        expid: int,
+        cachedir: str,
+        _debug: bool = False,
+        **kwargs,
+    ):
+        """
+        Ensure CabeanInstance is cached per expid, then compute controls.
+        """
+        if expid not in cache:
+            inst = make_cabean_iface(bn, cachedir)
+            if inst == CABEAN_OUT_MEMORY:
+                return list()
+            cache[expid] = inst
+
+        return ctrl_target_control_iface(
+            cache[expid],
+            target=target,
+            method=cls.method,
+            _debug=_debug,
+            **kwargs,
+        )
+
+    @staticmethod
+    def free_experiment(expid: int):
+        if expid in cache:
+            del cache[expid]
+
+
+# Example registered tools (adjust names/methods to your needs)
+@register_tool
+class CABEAN_ITC(CABEAN_TargetControlBase):
+    name = "CABEAN[ITC]"
+    method = "ITC"
+
+
+@register_tool
+class CABEAN_TTC(CABEAN_TargetControlBase):
+    name = "CABEAN[TTC]"
+    method = "TTC"
+
+
+@register_tool
+class CABEAN_PTC(CABEAN_TargetControlBase):
+    name = "CABEAN[PTC]"
+    method = "PTC"
