@@ -5,8 +5,6 @@ setup(
     version="0.1.0",
     packages=find_packages(where="src", include=["bntaxonomy", "bntaxonomy.*"]),
     package_dir={"": "src"},
-    install_requires=[],
-    # entry_points={"console_scripts": []},
     install_requires=[
         "algorecell-types",
         "networkx",

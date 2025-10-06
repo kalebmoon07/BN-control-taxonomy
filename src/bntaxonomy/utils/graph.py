@@ -23,7 +23,7 @@ def clean_and_sort_dot(input_file: str, output_file: str):
     new_graph = pydot.Dot(
         graph_name=graph.get_name(),
         graph_type=graph.get_type(),
-        strict=graph.get_strict(False),  # careful: call get_strict
+        strict=False,  # careful: call get_strict
     )
 
     # Sort nodes by name
