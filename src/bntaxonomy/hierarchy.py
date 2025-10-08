@@ -11,7 +11,12 @@ import bntaxonomy.utils.graph as graph_utils
 
 
 class SingleInputSummary:
-    def __init__(self, results: list[CtrlResult], name: str = "SingleInputSummary", bn: BooleanNetwork | None = None):
+    def __init__(
+        self,
+        results: list[CtrlResult],
+        name: str = "SingleInputSummary",
+        bn: BooleanNetwork | None = None,
+    ):
         self.name = name
         self.results = results
         self.G = nx.DiGraph()
@@ -94,12 +99,27 @@ class MultiInputSummary:
             group_name = os.path.basename(inst_selected)
             inst_bn_folder = inst_selected.replace("results", "instances")
             for exp_name in os.listdir(inst_selected):
-                bn = BooleanNetwork.load(f"{inst_bn_folder}/{exp_name}/transition_formula.bnet")
+                bn = BooleanNetwork.load(
+                    f"{inst_bn_folder}/{exp_name}/transition_formula.bnet"
+                )
                 input_summary = SingleInputSummary.from_folder(
                     f"{inst_selected}/{exp_name}", exp_name, bn
                 )
                 exp_groups[group_name].append(input_summary)
                 exp_list.append(input_summary)
+        return MultiInputSummary(exp_list, name, exp_groups)
+
+    @staticmethod
+    def from_instances(instances: list[str], name: str = "Hierarchy"):
+        exp_groups = defaultdict(list)
+        exp_list = []
+        for inst_bn_folder in instances:
+            exp_name = os.path.basename(inst_bn_folder)
+            bn = BooleanNetwork.load(f"{inst_bn_folder}/transition_formula.bnet")
+            result_folder = inst_bn_folder.replace("instances", "results")
+            input_summary = SingleInputSummary.from_folder(f"{result_folder}", exp_name, bn)
+            exp_groups["Custom"].append(input_summary)
+            exp_list.append(input_summary)
         return MultiInputSummary(exp_list, name, exp_groups)
 
     def save(self, fname: str):
@@ -114,19 +134,22 @@ class MultiInputSummary:
 
     def get_exp_names(self):
         return [exp.name for exp in self.exp_list]
-    
+
     def get_exp_group_names(self):
-        return {group: [exp.name for exp in exp_list] for group, exp_list in self.exp_groups.items()}
+        return {
+            group: [exp.name for exp in exp_list]
+            for group, exp_list in self.exp_groups.items()
+        }
 
     def to_conflict_matrix(self, use_group_idx=True, full_ce=False):
         """
-            Generates a LaTeX table representing the conflict matrix of the counterexamples.
-            The table is formatted for use in a LaTeX document and includes rotation for headers.
-            The function can be customized to use group indices or full counterexample names.
-            Prints the LaTeX code for the table.
-            Args:
-                use_group_idx (bool): If True, uses group indices for the counterexamples; otherwise, uses the index of the counterexample in the list.
-                full_ce (bool): If True, includes full counterexample names in the matrix; otherwise, only the first matched name is used.
+        Generates a LaTeX table representing the conflict matrix of the counterexamples.
+        The table is formatted for use in a LaTeX document and includes rotation for headers.
+        The function can be customized to use group indices or full counterexample names.
+        Prints the LaTeX code for the table.
+        Args:
+            use_group_idx (bool): If True, uses group indices for the counterexamples; otherwise, uses the index of the counterexample in the list.
+            full_ce (bool): If True, includes full counterexample names in the matrix; otherwise, only the first matched name is used.
         """
         column_str = """
                         \\newcolumntype{O}[2]{%
@@ -143,30 +166,34 @@ class MultiInputSummary:
         exp_names = self.get_exp_names()
 
         group_idx_dict = {
-            exp.name: chr(65 + idx) + str(exp_list.index(exp) + 1) ## A1, A2, B1, B2, etc.
+            exp.name: chr(65 + idx)
+            + str(exp_list.index(exp) + 1)  ## A1, A2, B1, B2, etc.
             for idx, exp_list in enumerate(self.exp_groups.values())
             for exp in exp_list
         }
-        
+
         def convert_to_str(value):
             if use_group_idx:
                 return group_idx_dict.get(value, value)
             else:
                 return str(exp_names.index(value))
-        
+
         for src, dst, data in self.ce_G.edges(data=True):
             i = node_idx[src]
             j = node_idx[dst]
             if full_ce:
-                names = sorted([convert_to_str(exp.name) for exp in data["counterexamples"]])
+                names = sorted(
+                    [convert_to_str(exp.name) for exp in data["counterexamples"]]
+                )
                 matrix[i][j] = f"{','.join(names)}"
             elif "counterexamples" in data and data["counterexamples"]:
                 example = data["counterexamples"][0].name  # assuming .name exists
                 matrix[i][j] = convert_to_str(example)
 
-
         # Build LaTeX tabular code
-        nodes = [node.replace('_','\\_') for node in sorted(self.ce_G.nodes())]  # fix consistent order
+        nodes = [
+            node.replace("_", "\\_") for node in sorted(self.ce_G.nodes())
+        ]  # fix consistent order
 
         latex = [column_str]
         latex.append("\\begin{tabular}{" + "|".join("c" * (n + 1)) + "}")
@@ -174,7 +201,7 @@ class MultiInputSummary:
 
         # Header
         # header = [""] + list(nodes)
-        
+
         header = [""] + [f"\\rot{{{node}}}" for node in nodes]
         latex.append(" & ".join(header) + " \\\\ \\hline")
 
@@ -190,16 +217,18 @@ class MultiInputSummary:
     def to_conflict_matrix_csv(self, use_group_idx=True, full_ce=False):
         # Get sorted list of nodes for consistent ordering
         nodes = sorted(self.ce_G.nodes())
-        
+
         # Build header
         matrix = [",".join([""] + nodes)]
-        
+
         exp_names = self.get_exp_names()
         group_idx_dict = {
-            exp.name: chr(65 + idx) + str(exp_list.index(exp) + 1) ## A1, A2, B1, B2, etc.
+            exp.name: chr(65 + idx)
+            + str(exp_list.index(exp) + 1)  ## A1, A2, B1, B2, etc.
             for idx, exp_list in enumerate(self.exp_groups.values())
             for exp in exp_list
         }
+
         def convert_to_str(value):
             if use_group_idx:
                 return group_idx_dict.get(value, value)
@@ -216,10 +245,14 @@ class MultiInputSummary:
                     ce_list = self.ce_G.edges[src, dst]["counterexamples"]
                     if ce_list:
                         if full_ce:
-                            names = sorted([convert_to_str(exp.name) for exp in ce_list])
-                            row.append('"'+ ",".join(names)+'"')
+                            names = sorted(
+                                [convert_to_str(exp.name) for exp in ce_list]
+                            )
+                            row.append('"' + ",".join(names) + '"')
                         else:
-                            row.append(convert_to_str(ce_list[0].name))  # Use the name of the first counterexample
+                            row.append(
+                                convert_to_str(ce_list[0].name)
+                            )  # Use the name of the first counterexample
                     else:
                         row.append("")
                 else:

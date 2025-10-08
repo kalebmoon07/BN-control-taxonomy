@@ -127,11 +127,20 @@ def main(argv=None):
         default=None,
     )
     parser.add_argument(
-        "-i",
+        "-ig",
         "--inst_groups",
         nargs="+",
         help="Instance groups to include. Default: all.",
-        default=[insts_practical, insts_ce],
+        default=list(),
+    )
+    parser.add_argument(
+        "-i",
+        "--instances",
+        nargs="+",
+        help=(
+            "List of specific instances to include."
+        ),
+        default=None,
     )
     parser.add_argument(
         "-o",
@@ -158,6 +167,7 @@ def main(argv=None):
 
     # selected_algs = set(args.algorithms) if args.algorithms else None
     inst_groups = [p.replace("instances", "results") for p in args.inst_groups]
+    instances: list[str] = args.instances
 
     os.makedirs(args.output, exist_ok=True)
     opath = args.output
@@ -165,7 +175,12 @@ def main(argv=None):
     # -----------------------------------------------------------------
     # Summaries from experiment groups
     # -----------------------------------------------------------------
-    hc = MultiInputSummary.from_inst_groups(inst_groups, "Hierarchy")
+    if inst_groups:
+        hc = MultiInputSummary.from_inst_groups(inst_groups, "Hierarchy")
+    elif args.instances:
+        hc = MultiInputSummary.from_instances(instances, "Hierarchy")
+    else:
+        raise ValueError("One of --inst_groups or --instances must be provided.")
 
     if args.algorithms:
         available = {r.name for e in hc.exp_list for r in e.results}
@@ -348,7 +363,7 @@ def main(argv=None):
         # Figure size derived from desired physical bar/pad sizes
         fig_w, fig_h = _compute_figsize_grid(len(algs_all), rows, cols, panel_h_in=3.6)
         fig, axes = plt.subplots(
-            rows, cols, figsize=(fig_w, fig_h), sharex=False, sharey=True
+            rows, cols, figsize=(fig_w, fig_h), sharex=False, sharey=False
         )
         axes = np.array(axes).reshape(-1)
 
@@ -361,7 +376,6 @@ def main(argv=None):
             wspace=(WSPACE_IN / (len(algs_all) * _slot_in())) if cols > 1 else 0.2,
             hspace=(HSPACE_IN / 3.6) if rows > 1 else 0.25,
         )
-        sub_df.to_clipboard()
 
         # Per-gene panels
         for i, (gene, g) in enumerate(
@@ -379,11 +393,12 @@ def main(argv=None):
                 annotate_bars(ax, bar, fmt="{:.2f}")
 
             # symmetric y-limit with padding
-            ax.set_ylim(-1.1, 1.1)
+            ax.set_ylim(-1.15, 1.15)
 
             ax.axhline(0, linewidth=1)
             ax.set_title(f"{gene}")
             ax.set_ylabel("Score")
+            ax.set_yticks([-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1])
             ax.set_xticks(x, algs_all, rotation=45, ha="right")
             ax.grid(axis="y", alpha=0.3)
 
@@ -432,12 +447,13 @@ def main(argv=None):
             )
             annotate_bars(ax_sum, bars, fmt="{:.2f}")
 
-        ax_sum.set_ylim(-1.1, 1.1)
+        ax_sum.set_ylim(-1.15, 1.15)
+        ax_sum.set_yticks([-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1])
         ax_sum.axhline(0, linewidth=1)
         ax_sum.set_title("Average over algorithms")
         ax_sum.set_ylabel("Score")
         ax_sum.set_xlabel("Gene")
-        ax_sum.set_xticks(xg, genes_order, rotation=45, ha="right")
+        ax_sum.set_xticks(xg, gene_sorted, rotation=45, ha="right")
         ax_sum.grid(axis="y", alpha=0.3)
 
         fig_s.suptitle(f"Instance={inst} — Summary", y=0.98, fontsize=12)
