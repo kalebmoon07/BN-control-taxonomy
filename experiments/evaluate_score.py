@@ -8,15 +8,12 @@ import argparse
 import math
 import sys
 import os
-from collections import OrderedDict
 
 import pandas as pd
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 from bntaxonomy.hierarchy import MultiInputSummary
-from automate_test import insts_practical, insts_ce
 
 
 # ---------------------------------------------------------------------
@@ -29,8 +26,8 @@ MARGIN_TB_IN = 0.6  # top/bottom figure margins (inches)
 WSPACE_IN = 0.35  # inter-subplot horizontal spacing (inches)
 HSPACE_IN = 0.45  # inter-subplot vertical spacing (inches)
 
-SIGN_COLORS = {1: "tab:blue", 0: "tab:red"}
-SIGN_NAME = {1: "Positive", 0: "Negative"}
+SIGN_COLORS = {1: "tab:blue", 0: "tab:red", -1: "tab:red"}
+SIGN_NAME = {1: "Positive", 0: "Negative", -1: "Negative"}
 
 
 def _slot_in() -> float:
@@ -137,9 +134,7 @@ def main(argv=None):
         "-i",
         "--instances",
         nargs="+",
-        help=(
-            "List of specific instances to include."
-        ),
+        help=("List of specific instances to include."),
         default=None,
     )
     parser.add_argument(
@@ -201,6 +196,7 @@ def main(argv=None):
     gene_ctrl_list = (
         []
     )  # (Instance, Algorithm, Gene, Sign, BN_size, ControlSize, Partners)
+    mcs_score_list = []  # (Instance, Algorithm, Gene, Sign, BN_size, Score)
     for exp in hc.exp_list:
         inst_name = exp.name
         n_nodes = len(exp.bn)
@@ -214,27 +210,30 @@ def main(argv=None):
             if not alg_result.d_list:
                 count_list.append((inst_name, alg_name, n_nodes, math.inf, dict()))
 
-            ctrl_set = set()
-            for ctrl_dict in alg_result.d_list:
-                genes = list(ctrl_dict.keys())
-                csize = len(ctrl_dict)
-                count_list.append((inst_name, alg_name, n_nodes, csize, ctrl_dict))
-
-                # partner tuples are sorted to be hash-stable
-                for gene, val in ctrl_dict.items():
-                    ctrl_set.add((gene, val))
-                    partners = tuple(sorted(g for g in genes if g != gene))
-                    gene_ctrl_list.append(
-                        (inst_name, alg_name, gene, val, n_nodes, csize, partners)
+            gene_set = alg_result.get_controlled_gene_set()
+            for gene in gene_set:
+                for sign in (0, 1):
+                    score, ctrl_list = alg_result.compute_mutation_score(
+                        gene, sign, n_nodes
+                    )
+                    mcs_score_list.append(
+                        (inst_name, alg_name, gene, sign, n_nodes, score)
                     )
 
-            # Fill missing (gene, sign) with ControlSize=-1
+            base_score, _ = alg_result.compute_mutation_score(
+                "_DUMMY_GENE_", 1, n_nodes
+            )
             for gene in bn_keys:
+                if gene in gene_set:
+                    continue
                 for sign in (0, 1):
-                    if (gene, sign) not in ctrl_set:
-                        gene_ctrl_list.append(
-                            (inst_name, alg_name, gene, sign, n_nodes, -1, ())
-                        )
+                    mcs_score_list.append(
+                        (inst_name, alg_name, gene, sign, n_nodes, base_score)
+                    )
+
+            for ctrl_dict in alg_result.d_list:
+                csize = len(ctrl_dict)
+                count_list.append((inst_name, alg_name, n_nodes, csize, ctrl_dict))
 
     # -----------------------------------------------------------------
     # Histogram (per Instance)
@@ -244,9 +243,15 @@ def main(argv=None):
     count_df = pd.DataFrame(
         count_list, columns=["Instance", "Algorithm", "BN_size", "ControlSize", "Genes"]
     )
+    mcs_score_df = pd.DataFrame(
+        mcs_score_list,
+        columns=["Instance", "Algorithm", "Gene", "Sign", "BN_size", "score"],
+    )
     if selected_algs:
         count_df["Algorithm"] = count_df["Algorithm"].astype(cat_type)
+        mcs_score_df["Algorithm"] = mcs_score_df["Algorithm"].astype(cat_type)
     count_df.to_csv(f"{opath}/count_control.csv", index=False)
+    mcs_score_df.to_csv(f"{opath}/mutation_score.csv", index=False)
 
     for inst, sub_df in count_df.groupby("Instance", sort=False):
         ct1 = pd.crosstab(sub_df["Algorithm"], sub_df["ControlSize"]).sort_index()
@@ -291,44 +296,15 @@ def main(argv=None):
         plt.close(fig)
 
     # -----------------------------------------------------------------
-    # Score calculations
-    # -----------------------------------------------------------------
-    score_df = pd.DataFrame(
-        gene_ctrl_list,
-        columns=[
-            "Instance",
-            "Algorithm",
-            "Gene",
-            "Sign",
-            "BN_size",
-            "ControlSize",
-            "Partners",
-        ],
-    )
-    score_df.drop_duplicates(
-        ["Instance", "Algorithm", "Gene", "Sign", "Partners"], inplace=True
-    )
-    if selected_algs:
-        score_df["Algorithm"] = score_df["Algorithm"].astype(cat_type)
-
-    def compute_score(row):
-        if row["ControlSize"] == -1:
-            return 0.0
-        if row["ControlSize"] == 0:
-            return 1.0
-        else:
-            score = 1 / math.comb(row["BN_size"] - 1, row["ControlSize"] - 1)
-            return score if row["Sign"] == 1 else -score
-
-    score_df["score"] = score_df.apply(compute_score, axis=1).fillna(0.0)
-    score_df.to_csv(f"{opath}/score_gene_level.csv", index=False)
-
-    # -----------------------------------------------------------------
     # Plotting: per-Instance grids (one panel per gene)
     # -----------------------------------------------------------------
     width_frac = _bar_width_frac()
 
-    for inst, sub_df in score_df.groupby("Instance", sort=False):
+    mcs_score_df["score"] = mcs_score_df.apply(
+        lambda row: row["score"] if row["Sign"] == 1 else -row["score"], axis=1
+    )
+
+    for inst, sub_df in mcs_score_df.groupby("Instance", sort=False):
         sub_df: pd.DataFrame = sub_df.groupby(
             ["Algorithm", "Gene", "Sign"], as_index=False, observed=True
         )["score"].sum()

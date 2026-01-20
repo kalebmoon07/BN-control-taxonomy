@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+from math import comb
 import json
 import os
 import re
@@ -43,6 +44,28 @@ class CtrlResult:
     def __str__(self) -> str:
         return f"{self.d_list}"
 
+    def copy(self):
+        return CtrlResult(self.name, [dict(d) for d in self.d_list])
+
+    def remove_inconsistent(self, gene: str, value: int):
+        new_ctrl_list = [d for d in self.d_list if gene not in d or d[gene] == value]
+
+        self.d_list = new_ctrl_list
+
+    def add_term_to_all_ctrl(self, gene: str, value: int):
+        """Adds a dictionary to every ctrl in the list. Inconsistent values are skipped.
+
+        Args:
+            term (dict[str, int]): Dictionary of terms to add to each control.
+        """
+
+        for d in self.d_list:
+            if gene in d and d[gene] != value:
+                raise KeyError(
+                    f"Inconsistent value for key '{gene}': {d[gene]} != {value}"
+                )
+            d[gene] = value
+
     def iter_ctrl_not_included_by(self, other: CtrlResult):
         return (
             x for x in self.d_list if not any(check_smaller(y, x) for y in other.d_list)
@@ -63,6 +86,7 @@ class CtrlResult:
         self.d_list = d_list
 
     def drop_nonminimal(self):
+        self.sort_d_list()
         d_list = list()
         for ctrl in self.d_list:
             if not any(True for other in d_list if check_smaller(other, ctrl)):
@@ -75,6 +99,45 @@ class CtrlResult:
             if len(ctrl) <= size_limit:
                 d_list.append(ctrl)
         self.d_list = d_list
+
+    def get_mutation_set(self):
+        mutation_set = set()
+        for ctrl in self.d_list:
+            for gene, value in ctrl.items():
+                mutation_set.add((gene, value))
+        return mutation_set
+
+    def get_controlled_gene_set(self):
+        gene_set = set()
+        for ctrl in self.d_list:
+            for gene in ctrl.keys():
+                gene_set.add(gene)
+        return gene_set
+
+    def compute_mutation_score(
+        self, gene: str, value: int, bn_size: int
+    ) -> tuple[float, CtrlResult]:
+        """Computes the mutation score for a given gene and value.
+
+        Args:
+            gene (str): Gene name.
+            value (int): Value to set the gene to.
+            bn_size (int): Size of the Boolean network.
+        Returns:
+            float: Mutation score.
+            CtrlResult: Updated control list.
+        """
+        ctrl_list = self.copy()
+        ctrl_list.remove_inconsistent(gene, value)
+        ctrl_list.add_term_to_all_ctrl(gene, value)
+        ctrl_list.drop_nonminimal()
+        return (
+            sum(
+                1 / (2 ** (len(ctrl) - 1)) / comb(bn_size - 1, len(ctrl) - 1)
+                for ctrl in ctrl_list.d_list
+            ),
+            ctrl_list,
+        )
 
 
 def refine_pert(s: ReprogrammingStrategies):
