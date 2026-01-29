@@ -140,6 +140,12 @@ class MultiInputSummary:
             group: [exp.name for exp in exp_list]
             for group, exp_list in self.exp_groups.items()
         }
+    
+    def get_exp_group_name_from_exp(self, exp_name: str):
+        for group, exp_list in self.exp_groups.items():
+            if any(exp.name == exp_name for exp in exp_list):
+                return group
+        return None
 
     def to_conflict_matrix(self, use_group_idx=True, full_ce=False):
         """

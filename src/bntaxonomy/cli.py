@@ -8,11 +8,11 @@ from argparse import ArgumentParser
 
 import os.path
 
-import bntaxonomy
 from bntaxonomy.iface import load_tools, tool_names
 from bntaxonomy.utils.log import main_logger, configure_logging
 from bntaxonomy.experiment import ExperimentHandler
 from bntaxonomy.hierarchy import SingleInputSummary
+import os
 
 def main():
     configure_logging("cli")
@@ -23,20 +23,33 @@ def main():
             help="Exclude nodes specifying the target phenotype from candidate perturbations")
     ap.add_argument("max_size", type=int,
             help="Maximum number of perturbations")
-    ap.add_argument("instances", type=str, nargs="+",
+    ap.add_argument("--instances", type=str, nargs="+", default=list(),
             help="Paths to instances, necessarily in an 'instances' subdirectory")
+    ap.add_argument(
+        "--instance-groups", type=str, nargs="+", default=list(),
+        help="Paths to folders that contain instance subfolders",
+)
+    
+    
+
     ap.add_argument("--tools", choices=tool_names(), nargs="*")
 
     args = ap.parse_args()
-
+    for grp in args.instance_groups:
+        if not os.path.isdir(grp):
+            ap.error(f"Instance group path not a directory: {grp}")
+        for name in sorted(os.listdir(grp)):
+            path = os.path.join(grp, name)
+            if os.path.isdir(path):
+                args.instances.append(path)
+                
     for inst in args.instances:
-
         if not os.path.isdir(inst):
-            main_logger.warning(" {inst} is not a directory, ignoring")
+            main_logger.warning(f" {inst} is not a directory, ignoring")
             continue
         parts = inst.split(os.path.sep)
         if "instances" not in parts:
-            main_logger.warning(" {inst} is not an 'instances' directory, ignoring")
+            main_logger.warning(f" {inst} is not an 'instances' directory, ignoring")
             continue
 
         main_logger.info(f"Running {inst}")

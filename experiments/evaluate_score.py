@@ -94,6 +94,25 @@ def sort_by_lex_score(df_inst: pd.DataFrame):
     ).index.to_list()
     return gene_sorted
 
+def sort_by_neg_score(df_inst: pd.DataFrame):
+    # collapse to one row per (Gene, Sign)
+    g: pd.DataFrame = (
+        df_inst.reset_index()
+        .groupby(["Gene", "Sign"], as_index=False, observed=True)["score"]
+        .sum()
+    )
+
+    # wide form with separate positive/negative columns
+    wide = g.pivot(index="Gene", columns="Sign", values="score").fillna(0.0)
+    wide = wide.rename(columns={1: "pos", 0: "neg_raw"})
+    wide["neg"] = wide["neg_raw"].abs()
+    wide["total"] = wide["pos"] + wide["neg"]
+
+    # final sort: primary by total (desc), secondary by positive (desc)
+    gene_sorted = wide.sort_values(
+        by=["neg", "pos"], ascending=[False, False], kind="mergesort"
+    ).index.to_list()
+    return gene_sorted
 
 def layout_single_axes(fig_w_in: float, fig_h_in: float):
     """Return (fig, ax) for a single-axes figure with inch-based margins applied."""
@@ -141,7 +160,7 @@ def main(argv=None):
         "-o",
         "--output",
         help="Output directory for results.",
-        default=f"{cwd}/results/fig_score",
+        default=f"{cwd}/results",
     )
     parser.add_argument(
         "-g",
@@ -175,7 +194,16 @@ def main(argv=None):
     elif args.instances:
         hc = MultiInputSummary.from_instances(instances, "Hierarchy")
     else:
-        raise ValueError("One of --inst_groups or --instances must be provided.")
+        instances_root = os.path.join(cwd, "instances")
+        if not os.path.isdir(instances_root):
+            raise FileNotFoundError(f"Instances directory not found: {instances_root}")
+        group_dirs = sorted(
+            d for d in os.listdir(instances_root) if os.path.isdir(os.path.join(instances_root, d))
+        )
+        if not group_dirs:
+            raise RuntimeError(f"No instance groups found in {instances_root}")
+        inst_groups = [os.path.join(cwd, "results", d) for d in group_dirs]
+        hc = MultiInputSummary.from_inst_groups(inst_groups, "Hierarchy")
 
     if args.algorithms:
         available = {r.name for e in hc.exp_list for r in e.results}
@@ -250,10 +278,11 @@ def main(argv=None):
     if selected_algs:
         count_df["Algorithm"] = count_df["Algorithm"].astype(cat_type)
         mcs_score_df["Algorithm"] = mcs_score_df["Algorithm"].astype(cat_type)
-    count_df.to_csv(f"{opath}/count_control.csv", index=False)
-    mcs_score_df.to_csv(f"{opath}/mutation_score.csv", index=False)
+    mcs_score_df = mcs_score_df.sort_values(by=["Instance", "Algorithm", "Gene", "Sign"])
+    mcs_score_df.to_csv(f"{opath}/score.csv", index=False)
 
     for inst, sub_df in count_df.groupby("Instance", sort=False):
+        inst_group = hc.get_exp_group_name_from_exp(inst)
         ct1 = pd.crosstab(sub_df["Algorithm"], sub_df["ControlSize"]).sort_index()
         # Ensure columns for both control sizes exist (1, 2)
         full_sizes = [1, 2]
@@ -292,7 +321,7 @@ def main(argv=None):
         ax.set_ylim(0, max(1, int(ct1.to_numpy().max())) * 1.15)  # headroom for labels)
         plt.subplots_adjust(bottom=0.22, right=0.85)
 
-        fig.savefig(f"{opath}/{inst}_histogram.png", dpi=200, bbox_inches="tight")
+        fig.savefig(f"{opath}/{inst_group}/{inst}/_score_histogram.png", dpi=200, bbox_inches="tight")
         plt.close(fig)
 
     # -----------------------------------------------------------------
@@ -305,6 +334,7 @@ def main(argv=None):
     )
 
     for inst, sub_df in mcs_score_df.groupby("Instance", sort=False):
+        inst_group = hc.get_exp_group_name_from_exp(inst)
         sub_df: pd.DataFrame = sub_df.groupby(
             ["Algorithm", "Gene", "Sign"], as_index=False, observed=True
         )["score"].sum()
@@ -331,7 +361,7 @@ def main(argv=None):
 
         total = m
         if m <= 3:
-            rows, cols = 1, m
+            rows, cols = m, 1
         else:
             cols = max(1, int(math.ceil(math.sqrt(total))))
             rows = int(math.ceil(total / cols))
@@ -384,7 +414,7 @@ def main(argv=None):
 
         fig.suptitle(f"Instance={inst}", y=0.995, fontsize=12)
         plt.tight_layout()
-        plt.savefig(f"{opath}/{inst}_full.png", dpi=200, bbox_inches="tight")
+        plt.savefig(f"{opath}/{inst_group}/{inst}/_score_full.png", dpi=200, bbox_inches="tight")
         plt.close(fig)
 
         # -----------------------------------------------------------------
@@ -397,7 +427,7 @@ def main(argv=None):
             .reset_index()
         )
 
-        gene_sorted = sort_by_lex_score(sub_df)
+        gene_sorted = sort_by_neg_score(sub_df)
         sum_by_gene["Gene"] = pd.Categorical(
             sum_by_gene["Gene"], categories=gene_sorted, ordered=True
         )
@@ -407,7 +437,7 @@ def main(argv=None):
         n_gene = len(genes_order)
         content_gene_w = max(1, n_gene) * _slot_in()
         fig_w_s = content_gene_w + 2 * MARGIN_LR_IN
-        fig_h_s = 6
+        fig_h_s = 4
 
         fig_s, ax_sum = layout_single_axes(fig_w_s, fig_h_s)
 
@@ -433,7 +463,7 @@ def main(argv=None):
         ax_sum.grid(axis="y", alpha=0.3)
 
         fig_s.suptitle(f"Instance={inst} — Summary", y=0.98, fontsize=12)
-        plt.savefig(f"{opath}/{inst}_summary.png", dpi=200, bbox_inches="tight")
+        plt.savefig(f"{opath}/{inst_group}/{inst}/_score_summary.png", dpi=200, bbox_inches="tight")
         plt.close(fig_s)
 
 
