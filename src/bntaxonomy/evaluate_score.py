@@ -131,8 +131,6 @@ def layout_single_axes(fig_w_in: float, fig_h_in: float):
 # Main
 # ---------------------------------------------------------------------
 def main(argv=None):
-    cwd = os.path.dirname(os.path.abspath(__file__))
-
     parser = argparse.ArgumentParser(description="Compute/plot control scores.")
     parser.add_argument(
         "-a",
@@ -160,7 +158,7 @@ def main(argv=None):
         "-o",
         "--output",
         help="Output directory for results.",
-        default=f"{cwd}/results",
+        default=f"experiments/results",
     )
     parser.add_argument(
         "-g",
@@ -194,7 +192,7 @@ def main(argv=None):
     elif args.instances:
         hc = MultiInputSummary.from_instances(instances, "Hierarchy")
     else:
-        instances_root = os.path.join(cwd, "instances")
+        instances_root = os.path.join("experiments", "instances")
         if not os.path.isdir(instances_root):
             raise FileNotFoundError(f"Instances directory not found: {instances_root}")
         group_dirs = sorted(
@@ -202,7 +200,7 @@ def main(argv=None):
         )
         if not group_dirs:
             raise RuntimeError(f"No instance groups found in {instances_root}")
-        inst_groups = [os.path.join(cwd, "results", d) for d in group_dirs]
+        inst_groups = [os.path.join("experiments", "results", d) for d in group_dirs]
         hc = MultiInputSummary.from_inst_groups(inst_groups, "Hierarchy")
 
     if args.algorithms:

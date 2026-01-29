@@ -1,14 +1,10 @@
 import argparse
 import json
 import os
-from automate_test import insts_ce, insts_practical, get_insts
-
 from bntaxonomy.hierarchy import MultiInputSummary
 
 
 def main(argv=None):
-    cwd = os.path.dirname(os.path.abspath(__file__))
-
     parser = argparse.ArgumentParser(description="Summarize counterexamples across instance groups.")
     parser.add_argument(
         "-ig",
@@ -35,10 +31,15 @@ def main(argv=None):
         hc = MultiInputSummary.from_instances(args.instances, "Hierarchy")
     else:
         # default behaviour: use lists from automate_test
-        inst_groups = [
-            result_dir.replace("instances", "results")
-            for result_dir in [insts_practical, insts_ce]
-        ]
+        instances_root = os.path.join("experiments", "instances")
+        if not os.path.isdir(instances_root):
+            raise FileNotFoundError(f"Instances directory not found: {instances_root}")
+        group_dirs = sorted(
+            (d for d in os.listdir(instances_root) if os.path.isdir(os.path.join(instances_root, d))), reverse=True
+        )
+        if not group_dirs:
+            raise RuntimeError(f"No instance groups found in {instances_root}")
+        inst_groups = [os.path.join("experiments", "results", d) for d in group_dirs]
         hc = MultiInputSummary.from_inst_groups(inst_groups, "Hierarchy")
 
     # Print counterexample edges and save summary graphs/csvs
@@ -48,12 +49,17 @@ def main(argv=None):
             [inst.name for inst in hc.ce_G.get_edge_data(a1, a2)["counterexamples"]],
         )
 
-    os.makedirs(f"{cwd}/results", exist_ok=True)
-    hc.save(f"{cwd}/results/_summary")
-
-    with open(f"{cwd}/results/counterexample_first_match.csv", "w") as f:
+    os.makedirs(f"experiments/results", exist_ok=True)
+    hc.save(f"experiments/results/_summary")
+    
+    exp_names = hc.get_exp_names()
+    group_names = hc.get_exp_group_names()
+    with open(f"experiments/results/counterexample_group_list.json", "w") as f:
+        json.dump(group_names, f, indent=4)
+        
+    with open(f"experiments/results/counterexample_first_match.csv", "w") as f:
         f.write(hc.to_conflict_matrix_csv(full_ce=False))
-    with open(f"{cwd}/results/counterexample_full_match.csv", "w") as f:
+    with open(f"experiments/results/counterexample_full_match.csv", "w") as f:
         f.write(hc.to_conflict_matrix_csv(full_ce=True))
 
 if __name__ == "__main__":
