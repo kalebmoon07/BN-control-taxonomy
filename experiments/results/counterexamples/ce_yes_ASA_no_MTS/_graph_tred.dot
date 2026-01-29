@@ -15,7 +15,6 @@ graph [style=dashed, color=black];
 "optbn[SA]";
 ActoNet;
 }
-
 subgraph cluster_1 {
 label="cluster_1";
 graph [style=dashed, color=black];
@@ -23,7 +22,6 @@ graph [style=dashed, color=black];
 "SM[brute-force]";
 Caspo;
 }
-
 subgraph cluster_2 {
 label="cluster_2";
 graph [style=dashed, color=black];
@@ -31,7 +29,6 @@ graph [style=dashed, color=black];
 "SM[internal]";
 "SM[minimal]";
 }
-
 "BoNesis[MTS]";
 "BoNesis[MTS]" -> "BoNesis[FP]" [lhead="cluster_0"];
 "SM[minimal]" -> "PBN[percolation]" [ltail="cluster_2", lhead="cluster_1"];

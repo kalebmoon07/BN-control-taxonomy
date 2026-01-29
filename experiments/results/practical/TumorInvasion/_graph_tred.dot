@@ -9,28 +9,24 @@ graph [style=dashed, color=black];
 "optbn[FP]";
 ActoNet;
 }
-
 subgraph cluster_1 {
 label="cluster_1";
 graph [style=dashed, color=black];
 "BoNesis[MTS]";
 "PBN[ASA]";
 }
-
 subgraph cluster_2 {
 label="cluster_2";
 graph [style=dashed, color=black];
 "CABEAN[PTC]";
 "PBN[trap_spaces]";
 }
-
 subgraph cluster_3 {
 label="cluster_3";
 graph [style=dashed, color=black];
 "PBN[SA]";
 "optbn[SA]";
 }
-
 subgraph cluster_4 {
 label="cluster_4";
 graph [style=dashed, color=black];
@@ -38,14 +34,12 @@ graph [style=dashed, color=black];
 "SM[brute-force]";
 Caspo;
 }
-
 subgraph cluster_5 {
 label="cluster_5";
 graph [style=dashed, color=black];
 "SM[internal]";
 "SM[minimal]";
 }
-
 "CABEAN[ITC]";
 "CABEAN[TTC]";
 "CABEAN[ITC]" -> "PBN[percolation]" [lhead="cluster_4"];

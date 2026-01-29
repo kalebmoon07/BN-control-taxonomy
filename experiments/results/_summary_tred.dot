@@ -9,14 +9,12 @@ graph [style=dashed, color=black];
 "optbn[FP]";
 ActoNet;
 }
-
 subgraph cluster_1 {
 label="cluster_1";
 graph [style=dashed, color=black];
 "PBN[SA]";
 "optbn[SA]";
 }
-
 subgraph cluster_2 {
 label="cluster_2";
 graph [style=dashed, color=black];
@@ -24,7 +22,6 @@ graph [style=dashed, color=black];
 "SM[brute-force]";
 Caspo;
 }
-
 "BoNesis[MTS]";
 "CABEAN[ITC]";
 "CABEAN[PTC]";

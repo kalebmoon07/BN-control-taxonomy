@@ -9,7 +9,6 @@ graph [style=dashed, color=black];
 "optbn[FP]";
 ActoNet;
 }
-
 subgraph cluster_1 {
 label="cluster_1";
 graph [style=dashed, color=black];
@@ -21,7 +20,6 @@ graph [style=dashed, color=black];
 "optbn[SA]";
 Caspo;
 }
-
 subgraph cluster_2 {
 label="cluster_2";
 graph [style=dashed, color=black];
@@ -31,7 +29,6 @@ graph [style=dashed, color=black];
 "SM[internal]";
 "SM[minimal]";
 }
-
 "CABEAN[ITC]";
 "CABEAN[ITC]" -> "CABEAN[PTC]" [lhead="cluster_2"];
 "SM[minimal]" -> "BoNesis[MTS]" [ltail="cluster_2", lhead="cluster_1"];
