@@ -1,3 +1,9 @@
+if __name__ == "__main__":
+    import sys
+    from os.path import dirname, abspath
+    libdir = dirname(dirname(abspath(__file__)))
+    sys.path.insert(0, libdir)
+    
 import argparse
 import json
 import os

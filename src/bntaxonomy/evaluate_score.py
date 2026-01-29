@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""
-Evaluate and plot control scores for Boolean network control experiments.
-Usage:
-    python experiments/evaluate_score.py [options]
-"""
+if __name__ == "__main__":
+    import sys
+    from os.path import dirname, abspath
+    libdir = dirname(dirname(abspath(__file__)))
+    sys.path.insert(0, libdir)
+    
 import argparse
 import math
 import sys
