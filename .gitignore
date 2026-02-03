@@ -165,6 +165,7 @@ cython_debug/
 
 *.ispl
 *.txt
+!requirements.txt
 *.png
 *_full.json
-*main.log
+*.log
