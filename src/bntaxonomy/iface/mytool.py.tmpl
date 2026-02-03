@@ -36,9 +36,34 @@ class MyToolMethod1:
     @staticmethod
     def run(bn: str, max_size:int, target:dict, exclude:list,
             expid:int, persistent_cachedir:str):
+        """
+        Parameters
+        ----------
+        bn : str
+            Identifier or path for the Boolean network whose primes will be used.
+        max_size : int
+            Maximum number of fixed components in each control to be returned
+        target : dict
+            The target phenotype (Boolean subspace) specified as a conjunction of fixed components (e.g., {"Apoptosis_b1": 1, "RB1": 0} --> Apoptosis_b1 AND (NOT RB1))
+        exclude : list
+            A list of components (node names) that should not be included in any returned control.
+        expid : int
+            Experiment id used to select or create cached data.
+        cachedir : str
+            Directory path used to read/write cached prime data. Automatically created if cli.py is used
+        **kwargs
+            Additional keyword arguments
+        Returns
+        -------
+        control_set: list[dict]
+            A list of controls, where each control is represented as a dict of fixed components.
+        """
         if expid not in cache:
             cache[expid] = make_primes(bn, cachedir)
+        
         # must return a list of dict
+        control_set: list[dict] = your_method_logic(...)
+        return control_set
 
     @staticmethod
     def free_experiment(expid):
