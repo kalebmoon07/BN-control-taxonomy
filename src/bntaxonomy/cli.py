@@ -1,6 +1,7 @@
 if __name__ == "__main__":
     import sys
     from os.path import dirname, abspath
+
     libdir = dirname(dirname(abspath(__file__)))
     sys.path.insert(0, libdir)
 
@@ -14,35 +15,44 @@ from bntaxonomy.experiment import ExperimentHandler
 from bntaxonomy.hierarchy import SingleInputSummary
 import os
 
+
 def main():
     configure_logging("cli")
     load_tools()
 
     ap = ArgumentParser()
-    ap.add_argument("--exclude-targets", action="store_true",
-            help="Exclude nodes specifying the target phenotype from candidate perturbations")
-    ap.add_argument("max_size", type=int,
-            help="Maximum number of perturbations")
-    ap.add_argument("--instances", type=str, nargs="+", default=list(),
-            help="Paths to instances, necessarily in an 'instances' subdirectory")
     ap.add_argument(
-        "--instance-groups", type=str, nargs="+", default=list(),
-        help="Paths to folders that contain instance subfolders",
-)
-    
-    
+        "--exclude-targets",
+        action="store_true",
+        help="Exclude nodes specifying the target phenotype from candidate perturbations",
+    )
+    ap.add_argument("max_size", type=int, help="Maximum number of perturbations")
+    ap.add_argument(
+        "-ig",
+        "--inst_groups",
+        nargs="+",
+        help="Instance-group directories (under 'instances'). If provided, these will be translated to corresponding 'results' folders.",
+        default=list(),
+    )
+    ap.add_argument(
+        "-i",
+        "--instances",
+        nargs="+",
+        help="Explicit instance folders (under 'instances').",
+        default=list(),
+    )
 
     ap.add_argument("--tools", choices=tool_names(), nargs="*")
 
     args = ap.parse_args()
-    for grp in args.instance_groups:
+    for grp in args.inst_groups:
         if not os.path.isdir(grp):
             ap.error(f"Instance group path not a directory: {grp}")
         for name in sorted(os.listdir(grp)):
             path = os.path.join(grp, name)
             if os.path.isdir(path):
                 args.instances.append(path)
-                
+
     for inst in args.instances:
         if not os.path.isdir(inst):
             main_logger.warning(f" {inst} is not a directory, ignoring")
@@ -97,6 +107,7 @@ def main():
 
         exp_run = SingleInputSummary.from_folder(opath, inst)
         exp_run.save(f"{opath}/_graph")
+
 
 if __name__ == "__main__":
     main()

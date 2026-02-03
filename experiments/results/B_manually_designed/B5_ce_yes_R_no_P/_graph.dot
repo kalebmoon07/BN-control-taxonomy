@@ -1,4 +1,4 @@
-digraph {
+digraph G {
 "BoNesis[FP]";
 "BoNesis[MTS]";
 "CABEAN[ITC]";

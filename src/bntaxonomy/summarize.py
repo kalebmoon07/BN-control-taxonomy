@@ -41,8 +41,7 @@ def main(argv=None):
         if not os.path.isdir(instances_root):
             raise FileNotFoundError(f"Instances directory not found: {instances_root}")
         group_dirs = sorted(
-            (d for d in os.listdir(instances_root) if os.path.isdir(os.path.join(instances_root, d))), reverse=True
-        )
+            (d for d in os.listdir(instances_root) if os.path.isdir(os.path.join(instances_root, d))))
         if not group_dirs:
             raise RuntimeError(f"No instance groups found in {instances_root}")
         inst_groups = [os.path.join("experiments", "results", d) for d in group_dirs]

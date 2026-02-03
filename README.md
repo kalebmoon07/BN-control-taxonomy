@@ -35,17 +35,17 @@ colomoto-docker --bind . python src/bntaxonomy/cli.py {max_size} {instances...} 
 ## Examples
 
 ```sh
-# run all available tools on counterexamples instances with max_size=2
-python src/bntaxonomy/cli.py 2 experiments/instances/counterexamples/* --tools 'BoNesis[FP]' 'BoNesis[MTS]'
+# run all available tools on B_manually_designed instances with max_size=2
+python src/bntaxonomy/cli.py 2 experiments/instances/B_manually_designed/* --tools 'BoNesis[FP]' 'BoNesis[MTS]'
 
 # same, but run only BoNesis[FP] and BoNesis[MTS] tools
-python src/bntaxonomy/cli.py 2 experiments/instances/counterexamples/* --tools 'BoNesis[FP]' 'BoNesis[MTS]'
+python src/bntaxonomy/cli.py 2 experiments/instances/B_manually_designed/* --tools 'BoNesis[FP]' 'BoNesis[MTS]'
 
 # summarize results and make dominance graphs:
 python src/bntaxonomy/summarize.py
 
 # compute scores and generating plots (inside CoLoMoTo Docker):
-python src/bntaxonomy/evaluate_score.py -ig experiments/instances/counterexamples -o experiments/results/fig_counterexamples
+python src/bntaxonomy/evaluate_score.py -ig experiments/instances/B_manually_designed -o experiments/results/fig
 ```
 
 ## Acknowledgements
@@ -73,18 +73,18 @@ Examples (correct usage matching the current code):
 
 ```sh
 # Run specific instance(s):
-python src/bntaxonomy/cli.py 2 --instances experiments/instances/counterexamples/ce_long_attr --tools 'BoNesis[FP]' 'BoNesis[MTS]'
+python src/bntaxonomy/cli.py 2 --instances experiments/instances/B_manually_designed/ce_long_attr --tools 'BoNesis[FP]' 'BoNesis[MTS]'
 
 # Run all instances inside a group directory:
-python src/bntaxonomy/cli.py 2 --instance-groups experiments/instances/counterexamples --tools 'BoNesis[FP]' 'BoNesis[MTS]'
+python src/bntaxonomy/cli.py 2 --instance-groups experiments/instances/B_manually_designed --tools 'BoNesis[FP]' 'BoNesis[MTS]'
 
 # Recommended (inside CoLoMoTo Docker):
-colomoto-docker --bind . python src/bntaxonomy/cli.py 2 --instance-groups experiments/instances/practical/Bladder
+colomoto-docker --bind . python src/bntaxonomy/cli.py 2 --instance-groups experiments/instances/A_case_studies/Bladder
 ```
 
-## Summarize into a dominance graph and detect counterexamples (`src/bntaxonomy/summarize.py`)
+## Summarize into a dominance graph and detect B_manually_designed (`src/bntaxonomy/summarize.py`)
 
-Generate overall conflict matrices and grouped lists of counterexamples.
+Generate overall conflict matrices and grouped lists of B_manually_designed.
 
 Basic usage:
 
@@ -101,10 +101,10 @@ Example:
 
 ```sh
 # Summarize a pair of instance groups and write CSV/graph outputs to experiments/results
-python src/bntaxonomy/summarize.py -ig experiments/instances/practical
+python src/bntaxonomy/summarize.py -ig experiments/instances/A_case_studies
 
 # Summarize explicit instances
-python src/bntaxonomy/summarize.py -i experiments/instances/counterexamples/ce_long_attr experiments/instances/counterexamples/ce_yes_P_no_R
+python src/bntaxonomy/summarize.py -i experiments/instances/B_manually_designed/ce_long_attr experiments/instances/B_manually_designed/ce_yes_P_no_R
 ```
 
 ## Evaluating scores (`src/bntaxonomy/evaluate_score.py`)
@@ -119,7 +119,7 @@ python src/bntaxonomy/evaluate_score.py [options]
 
 Important options (see the script for full details):
 
-- `-ig`, `--inst_groups` PATH [PATH ...]: one or more instance-group paths you want to evaluate. These paths should point at the a directory containing multiple `instances` subdirectories (e.g. `experiments/instances/practical`); the script will automatically translate `instances` -> `results` to find the results folders produced by the CLI.
+- `-ig`, `--inst_groups` PATH [PATH ...]: one or more instance-group paths you want to evaluate. These paths should point at the a directory containing multiple `instances` subdirectories (e.g. `experiments/instances/A_case_studies`); the script will automatically translate `instances` -> `results` to find the results folders produced by the CLI.
 - `-i`, `--instances` PATH [PATH ...]: explicit instance folders (under `instances`); the script will look for the corresponding `results` folders.
 - `-a`, `--algorithms` ALG [ALG ...]: restrict to a subset of algorithms (names must match the algorithm names found in the result files).
 - `-g`, `--genes` GENE [GENE ...]: restrict plotting to these genes (also controls order in plots).
@@ -133,8 +133,8 @@ What it writes:
 Example:
 
 ```sh
-# Evaluate all instances in the Bladder and Myeloid groups and save plots to the default folder
-python src/bntaxonomy/evaluate_score.py -ig experiments/instances/practical
+# Evaluate all instances in biological case studies and save plots to the default folder
+python src/bntaxonomy/evaluate_score.py -ig experiments/instances/A_case_studies
 ```
 
 Notes:
