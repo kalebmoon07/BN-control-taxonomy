@@ -1,3 +1,4 @@
+import re
 import subprocess
 import networkx as nx
 import pydot
@@ -18,49 +19,47 @@ def export_dot_png(input_file: str, output_file: str):
 
 
 def clean_and_sort_dot(input_file: str, output_file: str):
-    graphs = pydot.graph_from_dot_file(input_file)
-    graph: pydot.Dot = graphs[0]
+    graph = pydot.graph_from_dot_file(input_file)[0]
     new_graph = pydot.Dot(
-        graph_name=graph.get_name(),
+        graph_name="G",
         graph_type=graph.get_type(),
-        strict=False,  # careful: call get_strict
+        strict=False,
     )
 
-    # Sort nodes by name
-    seq: int = 1
-    node_list = sorted(graph.get_nodes(), key=lambda x: x.get_name())
-    for node in node_list:
-        # Clean attributes
-        node: pydot.Node = node
-        if node.get_name() in ["graph", "node"]:
+    # Canonical graph attrs
+    gattrs = dict(graph.get_attributes())
+    gattrs.pop("bb", None)
+    for k in sorted(gattrs):
+        new_graph.set(k, gattrs[k])
+
+    # Nodes: sort + rebuild fresh with sorted attrs
+    for n in sorted(graph.get_nodes(), key=lambda x: x.get_name()):
+        nname = n.get_name()
+        if nname in ["graph", "node"]:
             continue
-        node_attrs = node.get_attributes()
-        for attr in ["pos", "height", "width"]:
-            node_attrs.pop(attr, None)
-        nodeG: pydot.Graph = node.obj_dict["parent_graph"]
-        nodeG.set_sequence(seq)
-        seq += 1
-        new_graph.add_node(node)
+        attrs = dict(n.get_attributes())
+        for a in ["pos", "height", "width"]:
+            attrs.pop(a, None)
+        attrs = {k: attrs[k] for k in sorted(attrs)}
+        new_graph.add_node(pydot.Node(nname, **attrs))
 
-    # Sort edges by (source, destination)
-    edge_list = sorted(
+    # Edges: sort + rebuild fresh with sorted attrs
+    for e in sorted(
         graph.get_edges(), key=lambda e: (e.get_source(), e.get_destination())
-    )
-    for edge in edge_list:
-        edge: pydot.Edge = edge
-        edge_attrs = edge.get_attributes()
-        edge_attrs.pop("pos", None)
-        edgeG: pydot.Graph = edge.obj_dict["parent_graph"]
-        edgeG.set_sequence(seq)
-        seq += 1
-        new_graph.add_edge(edge)
+    ):
+        attrs = dict(e.get_attributes())
+        attrs.pop("pos", None)
+        attrs = {k: attrs[k] for k in sorted(attrs)}
+        new_graph.add_edge(pydot.Edge(e.get_source(), e.get_destination(), **attrs))
 
-    # Clean top-level graph attributes
-    graph_attrs = new_graph.get_attributes()
-    graph_attrs.pop("bb", None)
+    # Write baseline DOT
+    dot_str = new_graph.to_string()
+    dot_str = dot_str.replace("\r\n", "\n").replace("\r", "\n")
 
-    # Save to output
-    new_graph.write(output_file)
+    # Write with forced LF
+    with open(output_file, "w", newline="\n", encoding="utf-8") as f:
+        f.write(dot_str)
+
 
 
 def cluster_cycles(input_dot: str, output_dot: str):
@@ -139,4 +138,10 @@ def cluster_cycles(input_dot: str, output_dot: str):
         new_graph.add_edge(new_edge)
 
     # Save
-    new_graph.write(output_dot)
+    dot_str = new_graph.to_string()
+    dot_str = dot_str.replace("\r\n", "\n").replace("\r", "\n")
+    # remove empty lines
+    lines = [ln for ln in dot_str.split("\n") if ln.strip() != ""]
+    dot_str = "\n".join(lines) + "\n"
+    with open(output_dot, "w", newline="\n", encoding="utf-8") as f:
+        f.write(dot_str)

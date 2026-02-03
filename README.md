@@ -6,13 +6,13 @@
 
 This is the recommended usage.
 
-You need [`colomoto-docker`](https://github.com/colomoto/colomoto-docker-py) command, see also https://colomoto.github.io/colomoto-docker.
+You need [`colomoto-docker`](https://github.com/colomoto/colomoto-docker-py) command, see also <https://colomoto.github.io/colomoto-docker>.
 
 ### General usage
 
 You need a recent Python. Required dependences are listed in `requirements.txt`, and can be installed using `pip`:
 
-```
+```sh
 pip install -r requirements.txt
 ```
 
@@ -32,8 +32,7 @@ python src/bntaxonomy/cli.py {max_size} {instances...} [--tools {tools...}]
 colomoto-docker --bind . python src/bntaxonomy/cli.py {max_size} {instances...} [--tools {tools...}]
 ```
 
-
-*Examples*
+## Examples
 
 ```sh
 # run all available tools on counterexamples instances with max_size=2
@@ -42,14 +41,16 @@ python src/bntaxonomy/cli.py 2 experiments/instances/counterexamples/* --tools '
 # same, but run only BoNesis[FP] and BoNesis[MTS] tools
 python src/bntaxonomy/cli.py 2 experiments/instances/counterexamples/* --tools 'BoNesis[FP]' 'BoNesis[MTS]'
 
-# collecting results and generating plots (inside CoLoMoTo Docker):
+# summarize results and make dominance graphs:
+python src/bntaxonomy/summarize.py
+
+# compute scores and generating plots (inside CoLoMoTo Docker):
 python src/bntaxonomy/evaluate_score.py -ig experiments/instances/counterexamples -o experiments/results/fig_counterexamples
 ```
 
 ## Acknowledgements
 
 TODO
-
 
 ## Detailed CLI usage
 
@@ -79,6 +80,31 @@ python src/bntaxonomy/cli.py 2 --instance-groups experiments/instances/counterex
 
 # Recommended (inside CoLoMoTo Docker):
 colomoto-docker --bind . python src/bntaxonomy/cli.py 2 --instance-groups experiments/instances/practical/Bladder
+```
+
+## Summarize into a dominance graph and detect counterexamples (`src/bntaxonomy/summarize.py`)
+
+Generate overall conflict matrices and grouped lists of counterexamples.
+
+Basic usage:
+
+```sh
+python src/bntaxonomy/summarize.py [options]
+```
+
+Important options:
+
+- `-ig`, `--inst_groups` PATH [PATH ...]: instance-group directories under `instances` (they will be mapped to `results`).
+- `-i`, `--instances` PATH [PATH ...]: explicit instance folders under `instances`.
+
+Example:
+
+```sh
+# Summarize a pair of instance groups and write CSV/graph outputs to experiments/results
+python src/bntaxonomy/summarize.py -ig experiments/instances/practical
+
+# Summarize explicit instances
+python src/bntaxonomy/summarize.py -i experiments/instances/counterexamples/ce_long_attr experiments/instances/counterexamples/ce_yes_P_no_R
 ```
 
 ## Evaluating scores (`src/bntaxonomy/evaluate_score.py`)
@@ -115,30 +141,3 @@ Notes:
 
 - The script expects that you have already run the CLI so that each instance has a corresponding `results` folder (the script maps `instances` -> `results` automatically when you pass `--inst_groups` or `--instances`).
 - The generated CSVs are convenient for further analysis or inclusion in figures.
-
-## Summarize counterexamples (`src/bntaxonomy/summarize.py`)
-
-Generate overall conflict matrices and grouped lists of counterexamples. This script accepts the same instance selection options as `evaluate_score.py`.
-
-Basic usage:
-
-```sh
-python src/bntaxonomy/summarize.py [options]
-```
-
-Important options:
-
-- `-ig`, `--inst_groups` PATH [PATH ...]: instance-group directories under `instances` (they will be mapped to `results`).
-- `-i`, `--instances` PATH [PATH ...]: explicit instance folders under `instances`.
-
-Example:
-
-```sh
-# Summarize a pair of instance groups and write CSV/graph outputs to experiments/results
-python src/bntaxonomy/summarize.py -ig experiments/instances/practical
-
-# Summarize explicit instances
-python src/bntaxonomy/summarize.py -i experiments/instances/counterexamples/ce_long_attr experiments/instances/counterexamples/ce_yes_P_no_R
-```
-
-
