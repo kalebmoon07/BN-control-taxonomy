@@ -69,14 +69,22 @@ Important options (see the script for full details):
 
 - `-ig`, `--inst_groups` PATH [PATH ...]: one or more instance-group paths you want to evaluate. These paths should point at the a directory containing multiple `instances` subdirectories (e.g. `experiments/instances/A_case_studies`); the script will automatically translate `instances` -> `results` to find the results folders produced by the CLI.
 - `-i`, `--instances` PATH [PATH ...]: explicit instance folders (under `instances`); the script will look for the corresponding `results` folders.
-- `-a`, `--algorithms` ALG [ALG ...]: restrict to a subset of algorithms (names must match the algorithm names found in the result files).
+- `-t`, `--tools` TOOL [TOOL ...]: restrict to a subset of tools (names must match the tool names found in the result files).
 - `-g`, `--genes` GENE [GENE ...]: restrict plotting to these genes (also controls order in plots).
 - `-o`, `--output` PATH: output directory for CSVs and figures (default `experiments/results`).
+- `--sort` {total,pos,neg}: Sorting method for genes in plots (default: `total`). Controls the gene ordering used in the generated plots.
+- `--format` {png,pdf}: Output figure format (default: `png`).
+
+Example:
+
+```sh
+python src/bntaxonomy/evaluate_score.py -ig experiments/instances/A_case_studies --sort pos
+```
 
 What it writes:
 
 - `score.csv` in the chosen output directory.
-- Per-instance PNGs: `<instance>/_score_histogram.png`, `<instance>/_score_full.png`, `<instance>/_score_summary.png`.
+- Per-instance figures: `<instance>/_score_histogram.<format>`, `<instance>/_score_full.<format>`, `<instance>/_score_summary.<format>`.
 
 Example:
 

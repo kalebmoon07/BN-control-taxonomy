@@ -167,6 +167,11 @@ cython_debug/
 *.txt
 !requirements.txt
 !requirements_tools.txt
+*.csv
+!experiments/results/score.csv
+!experiments/results/counterexample_first_match.csv
+!experiments/results/counterexample_full_match.csv
 *.png
 *_full.json
 *.log
+*.pdf
