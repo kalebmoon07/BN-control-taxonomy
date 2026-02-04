@@ -1,0 +1,10 @@
+bonesis=0.6.9
+cabean=1.0.0
+cabean-python=1.0.0
+caspo=4.0.1
+caspo-control=1.0
+mpbn=4.3
+optboolnet=1.0.1
+pyactonet=1.0
+pyboolnet=3.0.16
+pystablemotifs=3.0.6

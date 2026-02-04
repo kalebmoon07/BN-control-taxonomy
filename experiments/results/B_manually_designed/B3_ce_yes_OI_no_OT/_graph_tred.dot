@@ -1,0 +1,31 @@
+strict digraph G {
+graph [fontsize=10, fontname=Verdana, compound=true];
+node [shape=record, fontsize=10, fontname=Verdana];
+graph [nodesep=0.3, ranksep=0.8];
+subgraph cluster_0 {
+label="cluster_0";
+graph [style=dashed, color=black];
+"BoNesis[FP]";
+"BoNesis[MTS]";
+"PBN[ASA]";
+"PBN[SA]";
+"PBN[percolation]";
+"SM[brute-force]";
+"optbn[FP]";
+"optbn[SA]";
+ActoNet;
+Caspo;
+}
+subgraph cluster_1 {
+label="cluster_1";
+graph [style=dashed, color=black];
+"CABEAN[PTC]";
+"CABEAN[TTC]";
+"PBN[trap_spaces]";
+"SM[internal]";
+"SM[minimal]";
+}
+"CABEAN[ITC]";
+"CABEAN[ITC]" -> "CABEAN[PTC]" [lhead="cluster_1"];
+"SM[minimal]" -> "BoNesis[FP]" [ltail="cluster_1", lhead="cluster_0"];
+}

@@ -1,0 +1,53 @@
+strict digraph G {
+graph [fontsize=10, fontname=Verdana, compound=true];
+node [shape=record, fontsize=10, fontname=Verdana];
+graph [nodesep=0.3, ranksep=0.8];
+subgraph cluster_0 {
+label="cluster_0";
+graph [style=dashed, color=black];
+"BoNesis[FP]";
+"optbn[FP]";
+ActoNet;
+}
+subgraph cluster_1 {
+label="cluster_1";
+graph [style=dashed, color=black];
+"BoNesis[MTS]";
+"PBN[ASA]";
+}
+subgraph cluster_2 {
+label="cluster_2";
+graph [style=dashed, color=black];
+"CABEAN[PTC]";
+"PBN[trap_spaces]";
+}
+subgraph cluster_3 {
+label="cluster_3";
+graph [style=dashed, color=black];
+"PBN[SA]";
+"optbn[SA]";
+}
+subgraph cluster_4 {
+label="cluster_4";
+graph [style=dashed, color=black];
+"PBN[percolation]";
+"SM[brute-force]";
+Caspo;
+}
+subgraph cluster_5 {
+label="cluster_5";
+graph [style=dashed, color=black];
+"SM[internal]";
+"SM[minimal]";
+}
+"CABEAN[ITC]";
+"CABEAN[TTC]";
+"CABEAN[ITC]" -> "PBN[percolation]" [lhead="cluster_4"];
+"CABEAN[ITC]" -> "SM[internal]" [lhead="cluster_5"];
+"PBN[ASA]" -> "BoNesis[FP]" [ltail="cluster_1", lhead="cluster_0"];
+"PBN[trap_spaces]" -> "CABEAN[TTC]" [ltail="cluster_2"];
+"PBN[trap_spaces]" -> "PBN[SA]" [ltail="cluster_2", lhead="cluster_3"];
+"SM[minimal]" -> "CABEAN[PTC]" [ltail="cluster_5", lhead="cluster_2"];
+"optbn[SA]" -> "BoNesis[MTS]" [ltail="cluster_3", lhead="cluster_1"];
+Caspo -> "PBN[SA]" [ltail="cluster_4", lhead="cluster_3"];
+}
