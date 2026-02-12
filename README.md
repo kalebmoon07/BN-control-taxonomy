@@ -1,10 +1,11 @@
 # Comparing control sets from Boolean network control software tools
 
-This repository provides a framework to run various Boolean network control software tools on a collection of benchmark instances and compare their results. 
+This repository provides a framework to run various Boolean network control software tools on a collection of benchmark instances and compare their results.
+Given a Boolean network and a phenotype formula as an input, these tools compute (minimal) control sets where the phenotype is satisfied by their target states (e.g., fixed points, attractors, minimal trap spaces, etc.).
 
-The main features are:
+The main feature is the command line interface (CLI) for the following analyses:
 
-- A command line interface (CLI) to run multiple tools on multiple instances in batch mode.
+- Control sets found by implemented tools over available inputs.
 - A **dominance graph** to compare the control sets found by each tool for each instance.
   - If every control found by tool A has another subset control found by tool B, then tool B is said to _dominate_ tool A for that instance.
 - The **Mutation Co-occurrence Score** (MCS) for each mutation $(x_i=b)$ predicted by each tool
@@ -85,8 +86,14 @@ TODO
 
 ## Contributing to the project
 
-See [CONTRIBUTE.md](CONTRIBUTE.md).
+You are very welcome to contribute to this project by adding the following:
+
+- Inputs: Boolean networks and a phenotype
+- Tools: python wrappers for Boolean network control software tools that compute control sets for given inputs.
+Once added, dominance and MCS scores will be easily computed by the commands above.
+Please see [CONTRIBUTE.md](CONTRIBUTE.md).
 
 ## Detailed CLI usage
 
-See [CLI_COMMAND.md](CLI_COMMAND.md).
+Detailed options for running the commands and analyzing results are described in a separate file.
+Please see [CLI_COMMAND.md](CLI_COMMAND.md).
