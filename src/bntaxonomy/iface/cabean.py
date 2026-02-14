@@ -1,3 +1,9 @@
+"""This module provides a manual interface to the CABEAN tool for version 2.0.1. The binary is located at `../dep/cabean_2.0.0` relative to this file.
+The binary file can be downloaded from https://satoss.uni.lu/software/CABEAN/CABEAN-release-2.0.1.zip
+All rights to the CABEAN tool and its outputs belong to the original authors.
+Su, C., & Pang, J. (2021). Cabean 2.0: Efficient and Efficacious Control of Asynchronous Boolean Networks. In M. Huisman, C. Păsăreanu, & N. Zhan (Eds.), Formal Methods (pp. 581–598). Springer International Publishing. https://doi.org/10.1007/978-3-030-90870-6_31
+"""
+
 import json
 import os
 import subprocess
