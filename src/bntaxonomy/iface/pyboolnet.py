@@ -1,3 +1,8 @@
+"""The code in this module was adopted from the PyBoolNet library, see https://github.com/hklarner/pyboolnet/blob/master/pyboolnet/trap_spaces.py
+All rights to the CABEAN tool and its outputs belong to the original authors.
+* Cifuentes Fontanals, L., Tonello, E., & Siebert, H. (2020). Control Strategy Identification via Trap Spaces in Boolean Networks. In A. Abate, T. Petrov, & V. Wolf (Eds.), Computational Methods in Systems Biology (pp. 159–175). Springer International Publishing. https://doi.org/10.1007/978-3-030-60327-4_9 (GitHub: https://github.com/Lauracf/trap-space-control/blob/master/control_strategies.py)
+* Fontanals Laura, C., Tonello, E., & Siebert, H. (2022). Computing trap space-based control strategies for Boolean networks using answer set programming. AIP Conference Proceedings, 2611(1), 110002. https://doi.org/10.1063/5.0122073
+"""
 import json
 import logging
 import os

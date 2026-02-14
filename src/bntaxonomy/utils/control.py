@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import contextlib
-from math import comb
+from math import comb, prod
 import json
 import os
 import re
@@ -133,7 +133,7 @@ class CtrlResult:
         ctrl_list.drop_nonminimal()
         return (
             sum(
-                1 / (2 ** (len(ctrl) - 1)) / comb(bn_size - 1, len(ctrl) - 1)
+                prod(1 / 2 / (bn_size - c) for c in range(1, len(ctrl)))
                 for ctrl in ctrl_list.d_list
             ),
             ctrl_list,
