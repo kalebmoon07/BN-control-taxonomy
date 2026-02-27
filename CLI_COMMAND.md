@@ -30,7 +30,7 @@ python src/bntaxonomy/cli.py 2 --inst_groups experiments/instances/B_manually_de
 colomoto-docker --bind . python src/bntaxonomy/cli.py 2 --inst_groups experiments/instances/A_case_studies/Bladder
 ```
 
-## Summarize into a dominance graph and detect counterexamples (`src/bntaxonomy/summarize.py`)
+## Summarize into a coverage graph and detect counterexamples (`src/bntaxonomy/summarize.py`)
 
 Generate overall conflict matrices and grouped lists of counterexamples.
 
