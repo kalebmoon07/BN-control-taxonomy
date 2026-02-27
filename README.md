@@ -74,16 +74,6 @@ Outputs are generated under `experiments/results/`, including:
 - The MCS scores are available as CSV files in `scores.csv`.
 - Figures plotting the MCS scores made by `evaluate_score.py` (not synchronized).
 
-## References
-
-If you use this framework in your research, please cite the following paper:
-
-TODO
-
-## Acknowledgements
-
-TODO
-
 ## Contributing to the project
 
 You are very welcome to contribute to this project by adding the following:
@@ -97,3 +87,16 @@ Please see [CONTRIBUTE.md](CONTRIBUTE.md).
 
 Detailed options for running the commands and analyzing results are described in a separate file.
 Please see [CLI_COMMAND.md](CLI_COMMAND.md).
+
+## References
+
+If you use this framework in your research, please cite the following paper:
+
+```bibtex
+@article{biane_2026_Why,
+  title = {Why {{Boolean}} Network Control Tools Disagree: A Taxonomy of Control Problems},
+  author = {Biane, C{\'e}lia and Moon, Kyungduk and Lee, Kangbok and Paulev{\'e}, Lo{\"i}c},
+  year = 2026,
+  note = {Submitted working paper},
+}
+```
