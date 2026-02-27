@@ -10,7 +10,9 @@ Options (as implemented in `src/bntaxonomy/cli.py`):
 - `--instances PATH [PATH ...]`: one or more instance folders (each folder must live under an `instances` directory).
 - `--inst_groups PATH [PATH ...]`: one or more directories that contain instance subfolders (the CLI will add every subfolder found).
 - `--tools TOOL [TOOL ...]`: restrict which analysis tools to run (use the tool short names, e.g. `BoNesis[FP]`).
-- `--exclude-targets`: exclude nodes that specify the target phenotype from candidate perturbations.
+- `--exclude-targets`: exclude nodes that specify the target phenotype from candidate perturbations (default: `True`).
+- `--print-output`: print intermediate console output from tools (default: `False`).
+- `--clear-cache`: clear any existing cache for each experiment before running tools.
 
 Behaviour and output:
 

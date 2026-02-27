@@ -21,11 +21,6 @@ def main():
     load_tools()
 
     ap = ArgumentParser()
-    ap.add_argument(
-        "--exclude-targets",
-        action="store_true",
-        help="Exclude nodes specifying the target phenotype from candidate perturbations",
-    )
     ap.add_argument("max_size", type=int, help="Maximum number of perturbations")
     ap.add_argument(
         "-ig",
@@ -44,6 +39,23 @@ def main():
 
     ap.add_argument("--tools", choices=tool_names(), nargs="*")
 
+    # Other options
+    ap.add_argument(
+        "--exclude-targets",
+        action="store_true",
+        help="Exclude nodes specifying the target phenotype from candidate perturbations",
+    )
+    ap.add_argument(
+        "--print-output",
+        action="store_true",
+        help="Print console output from tools (except for the final results).",
+        )
+    ap.add_argument(
+        "--clear-cache",
+        action="store_true",
+        help="Clear any existing cache for each experiment before running tools.",
+    )
+    
     args = ap.parse_args()
     for grp in args.inst_groups:
         if not os.path.isdir(grp):
@@ -83,28 +95,10 @@ def main():
             only_minimal=True,
             load_precompute=True,
             exclude_targets=args.exclude_targets,
+            print_output=args.print_output,
+            clear_cache=args.clear_cache,
         )
         exp.run_tools(args.tools)
-
-        """
-        exp.ctrl_actonet_fp()
-        exp.ctrl_bonesis_fp()
-        exp.ctrl_bonesis_mts()
-        exp.ctrl_optboolnet_fp()
-        exp.ctrl_optboolnet_sync_attr()
-        exp.ctrl_caspo_vpts()
-        for update in ["synchronous", "asynchronous"]:
-            exp.ctrl_pyboolnet_model_checking(update)
-        for control_type in ["percolation", "trap_spaces"]:
-            exp.ctrl_pyboolnet_heuristics(control_type)
-        exp.ctrl_pystablemotif_brute_force()
-        for target_method in ["merge"]:  # ["merge", "history"]:
-            for driver_method in ["minimal", "internal"]:
-                exp.ctrl_pystablemotif_trapspace(target_method, driver_method)
-        for method in ["ITC", "TTC", "PTC"]:
-            exp.ctrl_cabean_target_control(method, _debug=True)
-        """
-
         exp_run = SingleInputSummary.from_folder(opath, inst)
         exp_run.save(f"{opath}/_graph")
 

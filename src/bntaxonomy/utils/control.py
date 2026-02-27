@@ -47,6 +47,9 @@ class CtrlResult:
     def copy(self):
         return CtrlResult(self.name, [dict(d) for d in self.d_list])
 
+    def remove_genes(self, gene_list: list[str]):
+        self.d_list = [d for d in self.d_list if not any(gene in d for gene in gene_list)]
+
     def remove_inconsistent(self, gene: str, value: int):
         new_ctrl_list = [d for d in self.d_list if gene not in d or d[gene] == value]
 

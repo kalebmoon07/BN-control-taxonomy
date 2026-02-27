@@ -1,6 +1,7 @@
 from __future__ import annotations
 import json
 import os
+import shutil
 
 from colomoto.minibn import BooleanNetwork
 
@@ -27,6 +28,8 @@ class ExperimentHandler:
         exclude_targets: bool = False,
         dump_full: bool = True,
         load_precompute: bool = False,
+        print_output: bool = False,
+        clear_cache: bool = False,
     ):
         self.name = name
         self.input_path = input_path
@@ -37,6 +40,8 @@ class ExperimentHandler:
         self.only_minimal = only_minimal
         self.dump_full = dump_full
         self.load_precompute = load_precompute
+        self.print_output = print_output
+        self.clear_cache = clear_cache
         self.results: list[CtrlResult] = list()
         os.makedirs(output_path, exist_ok=True)
 
@@ -65,6 +70,9 @@ class ExperimentHandler:
             self.inputs = {}
 
         self.cachedir = os.path.join(self.input_path, "cache")
+        if clear_cache:
+            if os.path.isdir(self.cachedir):
+                shutil.rmtree(self.cachedir)
         if not os.path.isdir(self.cachedir):
             os.makedirs(self.cachedir)
 
@@ -89,6 +97,7 @@ class ExperimentHandler:
         ctrl_result.drop_size_limit(self.max_size)
         if self.only_minimal:
             ctrl_result.drop_nonminimal()
+        ctrl_result.remove_genes(self.exclude)
 
         if self.to_console:
             main_logger.info(f"{ctrl_result.name:<14}: {ctrl_result}")
@@ -101,6 +110,7 @@ class ExperimentHandler:
         return ctrl_result
 
     def run_tools(self, filter_tools):
+        main_logger.info(f"Excluded genes: {self.exclude}")
         for toolcls in registered_tools():
             if filter_tools and toolcls.name not in filter_tools:
                 continue
@@ -116,12 +126,21 @@ class ExperimentHandler:
                 raise TypeError(
                     f"{toolcls.name}: Unknown BN type input {toolcls.bn_type}"
                 )
-            with suppress_console_output():
-                res = toolcls.run(
-                    bninp, self.max_size, self.target, self.exclude, *args
-                )
-            res = CtrlResult(toolcls.name, res)
-            self.postprocess(res)
+            try:
+                if not self.print_output:
+                    with suppress_console_output():
+                        res = toolcls.run(
+                            bninp, self.max_size, self.target, self.exclude, *args
+                        )
+                else:
+                    res = toolcls.run(
+                        bninp, self.max_size, self.target, self.exclude, *args
+                    )
+                res = CtrlResult(toolcls.name, res)
+                self.postprocess(res)
+            except Exception as e:
+                main_logger.error(f"Error running {toolcls.name}: {e}")
+                continue
 
         for toolcls in registered_tools():
             if toolcls.uses_cache:
