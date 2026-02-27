@@ -20,5 +20,5 @@ class ActoNetFP:
     @staticmethod
     def run(bn, max_size, target, exclude, inputs={}):
         a = myActoNet(bn, inputs)
-        r = a.reprogramming_fixpoints(target, maxsize=max_size, ignore=exclude)
+        r = a.reprogramming_fixpoints(target, maxsize=max_size)
         return refine_pert(r)

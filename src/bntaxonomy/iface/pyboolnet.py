@@ -795,9 +795,9 @@ class PyBoolNet_ModelChecking:
 
         return compute_control_strategies_with_model_checking(
                     primes=cache[expid],
-                    avoid_nodes=exclude,
                     target=[target],
-                    update=self.update)
+                    update=self.update,
+                    limit=max_size,)
 
     @staticmethod
     def free_experiment(expid):
@@ -829,7 +829,6 @@ class PyBoolNet_Heuristic:
 
         return run_control_problem(
                     primes=cache[expid],
-                    avoid_nodes=exclude,
                     limit=max_size,
                     target=target,
                     control_type=self.control_type,

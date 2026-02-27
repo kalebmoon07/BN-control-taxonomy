@@ -11,7 +11,7 @@ class OptBoolNetFixPoints:
     @time_check
     @staticmethod
     def run(bn, max_size, target, exclude):
-        s = control_fixpoint(bn, max_size, target, exclude)
+        s = control_fixpoint(bn, max_size, target)
         return [item[0] for item in s.perturbations()]
 
 
@@ -23,5 +23,5 @@ class OptBoolNetSyncAttr:
     @time_check
     @staticmethod
     def run(bn, max_size, target, exclude):
-        s = control_sync_attr_no_separation(bn, max_size, target, exclude)
+        s = control_sync_attr_no_separation(bn, max_size, target)
         return [item[0] for item in s.perturbations()]

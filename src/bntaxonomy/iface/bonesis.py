@@ -16,8 +16,7 @@ class BoNesisFixedPoints:
     @time_check
     @staticmethod
     def run(bn, max_size, target, exclude):
-        return list(marker_reprogramming_fixpoints(bn, target, max_size,
-                           exclude=exclude, at_least_one=False))
+        return list(marker_reprogramming_fixpoints(bn, target, max_size, at_least_one=False))
 
 @register_tool
 class BoNesisTrapSpaces:
@@ -27,5 +26,4 @@ class BoNesisTrapSpaces:
     @time_check
     @staticmethod
     def run(bn, max_size, target, exclude):
-        return list(marker_reprogramming(bn, target, max_size,
-                                         exclude=exclude))
+        return list(marker_reprogramming(bn, target, max_size))

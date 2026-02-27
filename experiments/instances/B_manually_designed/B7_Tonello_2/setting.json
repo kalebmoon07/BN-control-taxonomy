@@ -1,6 +1,6 @@
 {
     "inputs": {},
     "target": {
-        "x1": 0
+        "PHENOTYPE": 1
     }
 }

@@ -7,25 +7,20 @@ label="cluster_0";
 graph [style=dashed, color=black];
 "BoNesis[FP]";
 "BoNesis[MTS]";
+"CABEAN[PTC]";
+"CABEAN[TTC]";
 "PBN[ASA]";
 "PBN[SA]";
 "PBN[percolation]";
+"PBN[trap_spaces]";
 "SM[brute-force]";
+"SM[internal]";
+"SM[minimal]";
 "optbn[FP]";
 "optbn[SA]";
 ActoNet;
 Caspo;
 }
-subgraph cluster_1 {
-label="cluster_1";
-graph [style=dashed, color=black];
-"CABEAN[PTC]";
-"CABEAN[TTC]";
-"PBN[trap_spaces]";
-"SM[internal]";
-"SM[minimal]";
-}
 "CABEAN[ITC]";
-"CABEAN[ITC]" -> "CABEAN[PTC]" [lhead="cluster_1"];
-"SM[minimal]" -> "BoNesis[FP]" [ltail="cluster_1", lhead="cluster_0"];
+"CABEAN[ITC]" -> "BoNesis[FP]" [lhead="cluster_0"];
 }
