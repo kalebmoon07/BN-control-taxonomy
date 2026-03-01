@@ -1,9 +1,8 @@
 {
     "A_case_studies": [
         "A1_Bladder",
-        "A2_Myeloid",
-        "A3_T-LGL",
-        "A4_TumorInvasion"
+        "A2_T-LGL",
+        "A3_TumorInvasion"
     ],
     "B_manually_designed": [
         "B1_ce_long_attr",
