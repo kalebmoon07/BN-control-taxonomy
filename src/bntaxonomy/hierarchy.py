@@ -16,17 +16,27 @@ class SingleInputSummary:
         results: list[CtrlResult],
         name: str = "SingleInputSummary",
         bn: BooleanNetwork | None = None,
+        setting: dict | None = None,
     ):
         self.name = name
         self.results = results
         self.G = nx.DiGraph()
         self.bn = bn
+        self.setting = setting or {}
 
         for r1, r2 in combinations(self.results, 2):
             if r1.is_stronger_than(r2):
                 self.G.add_edge(r2.name, r1.name)
             if r2.is_stronger_than(r1):
                 self.G.add_edge(r1.name, r2.name)
+
+    @property
+    def target(self) -> dict:
+        """Phenotype target (node -> desired value) from ``setting.json``.
+
+        Returns an empty dict when no setting was loaded.
+        """
+        return dict(self.setting.get("target", {}))
 
     def save(self, fname: str):
         with suppress_console_output():
@@ -39,11 +49,13 @@ class SingleInputSummary:
             graph_utils.export_dot_png(tred_fname, f"{fname}_tred.png")
 
     @staticmethod
-    def from_folder(opath: str, name: str = "", bn: BooleanNetwork | None = None):
+    def from_folder(opath: str, name: str = "", bn: BooleanNetwork | None = None,
+                    setting: dict | None = None):
         files = [
             fname
             for fname in os.listdir(opath)
             if fname.endswith(".json") and not fname.endswith("_full.json")
+            and fname != "setting.json"
         ]
         sol_list = [
             CtrlResult(fname[:-5], json.load(open(f"{opath}/{fname}")))
@@ -51,7 +63,7 @@ class SingleInputSummary:
         ]
         if not name:
             name = opath.split("/")[-1]
-        return SingleInputSummary(sol_list, name, bn)
+        return SingleInputSummary(sol_list, name, bn, setting)
 
 
 class MultiInputSummary:
@@ -92,6 +104,14 @@ class MultiInputSummary:
         return MultiInputSummary(exp_list, name)
 
     @staticmethod
+    def _load_setting(inst_bn_folder: str) -> dict:
+        path = f"{inst_bn_folder}/setting.json"
+        if not os.path.isfile(path):
+            return {}
+        with open(path) as f:
+            return json.load(f)
+
+    @staticmethod
     def from_inst_groups(groups: list[str], name: str = "Hierarchy"):
         exp_groups = defaultdict(list)
         exp_list = []
@@ -102,8 +122,11 @@ class MultiInputSummary:
                 bn = BooleanNetwork.load(
                     f"{inst_bn_folder}/{exp_name}/transition_formula.bnet"
                 )
+                setting = MultiInputSummary._load_setting(
+                    f"{inst_bn_folder}/{exp_name}"
+                )
                 input_summary = SingleInputSummary.from_folder(
-                    f"{inst_selected}/{exp_name}", exp_name, bn
+                    f"{inst_selected}/{exp_name}", exp_name, bn, setting
                 )
                 exp_groups[group_name].append(input_summary)
                 exp_list.append(input_summary)
@@ -116,8 +139,11 @@ class MultiInputSummary:
         for inst_bn_folder in instances:
             exp_name = os.path.basename(inst_bn_folder)
             bn = BooleanNetwork.load(f"{inst_bn_folder}/transition_formula.bnet")
+            setting = MultiInputSummary._load_setting(inst_bn_folder)
             result_folder = inst_bn_folder.replace("instances", "results")
-            input_summary = SingleInputSummary.from_folder(f"{result_folder}", exp_name, bn)
+            input_summary = SingleInputSummary.from_folder(
+                f"{result_folder}", exp_name, bn, setting
+            )
             exp_groups["Custom"].append(input_summary)
             exp_list.append(input_summary)
         return MultiInputSummary(exp_list, name, exp_groups)
