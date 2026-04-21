@@ -358,6 +358,17 @@ def _jaccard(a: Set, b: Set) -> float:
     return len(a & b) / len(a | b)
 
 
+def _containment(a: Set, b: Set) -> float:
+    """Asymmetric set containment |A ∩ B| / |A|.
+
+    Empty A is treated as vacuously contained (returns 1.0), matching the
+    convention that ∅ ⊆ B for any B.
+    """
+    if not a:
+        return 1.0
+    return len(a & b) / len(a)
+
+
 def _geo_mean(values: Iterable[float], eps: float) -> float:
     arr = np.clip(np.asarray(list(values), dtype=float), 0.0, None)
     if arr.size == 0:
@@ -526,6 +537,28 @@ def _write_family_jaccard(ctrls: Dict[str, Set],
     _render_heatmap(
         df, outdir / f"_family_jaccard_heatmap.{fmt}",
         f"Family-level Jaccard ({instance})",
+        cmap="YlGn", vmin=0.0, vmax=1.0,
+    )
+
+
+def _write_family_containment(ctrls: Dict[str, Set],
+                              families: Dict[str, List[str]],
+                              outdir: Path, fmt: str, instance: str) -> None:
+    fam_sets: Dict[str, Set] = {}
+    for fam, tools in families.items():
+        members = [ctrls[t] for t in tools if t in ctrls]
+        fam_sets[fam] = set.intersection(*members) if members else set()
+    names = list(fam_sets)
+    M = np.zeros((len(names), len(names)))
+    for i, row in enumerate(names):
+        for j, col in enumerate(names):
+            # Cell (row=y, col=x) holds |x ∩ y| / |x|.
+            M[i, j] = _containment(fam_sets[col], fam_sets[row])
+    df = pd.DataFrame(M, index=names, columns=names)
+    df.to_csv(outdir / "_family_containment.csv")
+    _render_heatmap(
+        df, outdir / f"_family_containment_heatmap.{fmt}",
+        f"Family-level set containment |x∩y|/|x| ({instance})",
         cmap="YlGn", vmin=0.0, vmax=1.0,
     )
 
@@ -809,6 +842,7 @@ def main(argv=None):
         inst_score_df = mcs_score_df[mcs_score_df["Instance"] == inst]
         _write_family_partition(ctrls, families, mcs_outdir)
         _write_family_jaccard(ctrls, families, mcs_outdir, args.format, inst)
+        _write_family_containment(ctrls, families, mcs_outdir, args.format, inst)
         for sign in (0, 1):
             _write_topk_spearman_vs_ensemble(
                 inst_score_df, families, mcs_outdir, sign,
