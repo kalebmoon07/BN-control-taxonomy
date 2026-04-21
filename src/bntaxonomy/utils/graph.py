@@ -10,12 +10,31 @@ def write_dot(G: nx.DiGraph, output_file: str):
 
 
 def write_transitive_reduction(input_file: str, output_file: str):
-    subprocess.run(f"tred {input_file} | dot -Tdot -o {output_file}", shell=True)
+    # capture_output=True keeps stderr off fd 2, so callers wrapped in
+    # suppress_console_output (which redirects fd 1/2 to /dev/null) can
+    # still see Graphviz failures via the raised RuntimeError.
+    r = subprocess.run(
+        f"tred {input_file} | dot -Tdot -o {output_file}",
+        shell=True, capture_output=True, text=True,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(
+            f"tred|dot failed for {input_file} (rc={r.returncode}): "
+            f"{(r.stderr or r.stdout).strip()}"
+        )
     clean_and_sort_dot(output_file, output_file)
 
 
 def export_dot_png(input_file: str, output_file: str):
-    subprocess.run(f"dot -Tpng {input_file} -o {output_file}", shell=True)
+    r = subprocess.run(
+        ["dot", "-Tpng", input_file, "-o", output_file],
+        capture_output=True, text=True,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(
+            f"dot failed to render {input_file} -> {output_file} "
+            f"(rc={r.returncode}): {(r.stderr or r.stdout).strip()}"
+        )
 
 
 def clean_and_sort_dot(input_file: str, output_file: str):
@@ -62,7 +81,8 @@ def clean_and_sort_dot(input_file: str, output_file: str):
 
 
 
-def cluster_cycles(input_dot: str, output_dot: str):
+def cluster_cycles(input_dot: str, output_dot: str,
+                   tool_order: list[str] | None = None):
     graphs = pydot.graph_from_dot_file(input_dot)
     graph = graphs[0]
 
@@ -70,12 +90,29 @@ def cluster_cycles(input_dot: str, output_dot: str):
     for edge in graph.get_edges():
         G_nx.add_edge(edge.get_source(), edge.get_destination())
 
-    # Find SCCs
-    sccs = list(nx.strongly_connected_components(G_nx))
-    sccs = sorted(
-        [sorted(scc) for scc in sccs],  # sort nodes within each SCC
-        key=lambda x: x[0],  # sort SCCs by first element
+    # Rank each node by its position in ``tool_order``; nodes absent from
+    # the list sort after every listed tool but keep their relative order
+    # stable via a secondary alphabetical key.
+    rank = (
+        {name: i for i, name in enumerate(tool_order)}
+        if tool_order else {}
     )
+    sentinel = len(rank)
+
+    def node_rank(node: str) -> int:
+        # pydot preserves DOT quoting, so names like `"BoNesis[FP]"`
+        # arrive with their surrounding double quotes. Strip them before
+        # looking up against ``tool_order`` (which holds bare names).
+        return rank.get(node.strip('"'), sentinel)
+
+    # Find SCCs, sort nodes inside each cluster by rank, then sort the
+    # clusters themselves by their minimum-rank member so that cluster_0
+    # contains the tool appearing first in ``tool_order``.
+    sccs = [
+        sorted(scc, key=lambda n: (node_rank(n), n))
+        for scc in nx.strongly_connected_components(G_nx)
+    ]
+    sccs.sort(key=lambda scc: (node_rank(scc[0]), scc[0]))
 
     node_to_cluster = {}
     clusters = {}

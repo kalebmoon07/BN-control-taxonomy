@@ -8,6 +8,7 @@ import argparse
 import json
 import os
 from bntaxonomy.hierarchy import MultiInputSummary
+from bntaxonomy.iface import load_tools, tool_names
 
 
 def main(argv=None):
@@ -24,6 +25,18 @@ def main(argv=None):
         "--instances",
         nargs="+",
         help="Explicit instance folders (under 'instances').",
+        default=None,
+    )
+    parser.add_argument(
+        "-t",
+        "--tools",
+        nargs="+",
+        help=(
+            "Tool list used as the canonical ordering for cluster numbering "
+            "in the summary graph. Clusters are numbered by the earliest "
+            "listed member. Omit to fall back to tool_names() (empty when "
+            "tool backends are not installed in the current env)."
+        ),
         default=None,
     )
 
@@ -55,7 +68,19 @@ def main(argv=None):
         )
 
     os.makedirs(f"experiments/results", exist_ok=True)
-    hc.save(f"experiments/results/_summary")
+    if args.tools:
+        tool_order = list(args.tools)
+    else:
+        load_tools()
+        tool_order = tool_names()
+    hc.save(f"experiments/results/_summary", tool_order=tool_order)
+    # Rebuild per-instance _graph*.dot/.png alongside the summary so the
+    # cluster numbering used across instances stays in sync with the tool
+    # ordering passed to this script.
+    for exp in hc.exp_list:
+        if not exp.folder:
+            continue
+        exp.save(f"{exp.folder}/_graph", tool_order=tool_order)
     
     exp_names = hc.get_exp_names()
     group_names = hc.get_exp_group_names()

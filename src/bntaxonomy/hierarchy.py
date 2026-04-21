@@ -17,12 +17,16 @@ class SingleInputSummary:
         name: str = "SingleInputSummary",
         bn: BooleanNetwork | None = None,
         setting: dict | None = None,
+        folder: str = "",
     ):
         self.name = name
         self.results = results
         self.G = nx.DiGraph()
         self.bn = bn
         self.setting = setting or {}
+        # Original results folder (used by summarize.py to rebuild the
+        # per-instance _graph*.dot/.png alongside the aggregate _summary).
+        self.folder = folder
 
         for r1, r2 in combinations(self.results, 2):
             if r1.is_stronger_than(r2):
@@ -38,14 +42,14 @@ class SingleInputSummary:
         """
         return dict(self.setting.get("target", {}))
 
-    def save(self, fname: str):
+    def save(self, fname: str, tool_order: list[str] | None = None):
         with suppress_console_output():
             dot_fname = f"{fname}.dot"
             tred_fname = f"{fname}_tred.dot"
             graph_utils.write_dot(self.G, dot_fname)
             graph_utils.write_transitive_reduction(dot_fname, tred_fname)
             graph_utils.export_dot_png(tred_fname, f"{fname}.png")
-            graph_utils.cluster_cycles(tred_fname, tred_fname)
+            graph_utils.cluster_cycles(tred_fname, tred_fname, tool_order)
             graph_utils.export_dot_png(tred_fname, f"{fname}_tred.png")
 
     @staticmethod
@@ -63,7 +67,7 @@ class SingleInputSummary:
         ]
         if not name:
             name = opath.split("/")[-1]
-        return SingleInputSummary(sol_list, name, bn, setting)
+        return SingleInputSummary(sol_list, name, bn, setting, folder=opath)
 
 
 class MultiInputSummary:
@@ -148,14 +152,14 @@ class MultiInputSummary:
             exp_list.append(input_summary)
         return MultiInputSummary(exp_list, name, exp_groups)
 
-    def save(self, fname: str):
+    def save(self, fname: str, tool_order: list[str] | None = None):
         with suppress_console_output():
             dot_fname = f"{fname}.dot"
             tred_fname = f"{fname}_tred.dot"
             graph_utils.write_dot(self.G, dot_fname)
             graph_utils.write_transitive_reduction(dot_fname, tred_fname)
             graph_utils.export_dot_png(tred_fname, f"{fname}.png")
-            graph_utils.cluster_cycles(tred_fname, tred_fname)
+            graph_utils.cluster_cycles(tred_fname, tred_fname, tool_order)
             graph_utils.export_dot_png(tred_fname, f"{fname}_tred.png")
 
     def get_exp_names(self):

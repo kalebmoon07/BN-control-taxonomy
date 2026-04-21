@@ -100,7 +100,7 @@ def main():
         )
         exp.run_tools(args.tools)
         exp_run = SingleInputSummary.from_folder(opath, inst)
-        exp_run.save(f"{opath}/_graph")
+        exp_run.save(f"{opath}/_graph", tool_order=args.tools or tool_names())
 
 
 if __name__ == "__main__":
