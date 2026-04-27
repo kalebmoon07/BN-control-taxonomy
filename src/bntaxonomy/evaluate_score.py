@@ -30,7 +30,7 @@ GAP_IN = 0.12  # gap between neighboring bars (inches)
 MARGIN_LR_IN = 0.6  # left/right figure margins (inches)
 MARGIN_TB_IN = 0.6  # top/bottom figure margins (inches)
 WSPACE_IN = 0.35  # inter-subplot horizontal spacing (inches)
-HSPACE_IN = 0.45  # inter-subplot vertical spacing (inches)
+HSPACE_IN = 1.25  # inter-subplot vertical spacing (inches)
 FULL_FIG_XLABEL_PAD_IN = 0.55  # reserve bottom space for the full-figure x label
 
 SIGN_COLORS = {1: "tab:blue", 0: "tab:red", -1: "tab:red"}
@@ -1027,7 +1027,8 @@ def main(argv=None):
                 len(tools_all), rows, cols, panel_h_in=panel_h_in
             )
             fig, axes = plt.subplots(
-                rows, cols, figsize=(fig_w, fig_h), sharex=True, sharey=True
+                rows, cols, figsize=(fig_w, fig_h),
+                sharex=False, sharey=True,
             )
             axes = np.array(axes).reshape(-1)
 
@@ -1064,9 +1065,7 @@ def main(argv=None):
                 ax.axhline(0, linewidth=1)
                 ax.set_title(f"{gene}", fontsize=9)
 
-                row_idx = i // cols
                 col_idx = i % cols
-                show_bottom = row_idx == rows - 1 or i + cols >= total
                 show_left = col_idx == 0
                 configure_score_axis(
                     ax, fig, full_plot_values, log_scale,
@@ -1075,12 +1074,9 @@ def main(argv=None):
                 )
 
                 ax.set_xticks(x)
-                if show_bottom:
-                    ax.set_xticklabels(
-                        tools_all, rotation=35, ha="right", fontsize=8
-                    )
-                else:
-                    ax.tick_params(axis="x", labelbottom=False)
+                ax.set_xticklabels(
+                    tools_all, rotation=35, ha="right", fontsize=8
+                )
                 ax.grid(axis="y", alpha=0.3)
 
             for j in range(total, len(axes)):
@@ -1172,7 +1168,7 @@ def main(argv=None):
         )
         fig_c, axes_h = plt.subplots(
             rows_h, cols_h, figsize=(fig_w_h, fig_h_h),
-            sharex=True, sharey=True,
+            sharex=False, sharey=True,
         )
         axes_h = np.array(axes_h).reshape(-1)
 
@@ -1216,9 +1212,7 @@ def main(argv=None):
             ax.axhline(0, linewidth=1)
             ax.set_title(f"{gene}", fontsize=9)
 
-            row_idx = i // cols_h
             col_idx = i % cols_h
-            show_bottom = row_idx == rows_h - 1 or i + cols_h >= total_h
             show_left = col_idx == 0
             configure_count_axis(
                 ax, fig_c, global_counts,
@@ -1227,12 +1221,9 @@ def main(argv=None):
             )
 
             ax.set_xticks(x_h)
-            if show_bottom:
-                ax.set_xticklabels(
-                    tools_list, rotation=35, ha="right", fontsize=8
-                )
-            else:
-                ax.tick_params(axis="x", labelbottom=False)
+            ax.set_xticklabels(
+                tools_list, rotation=35, ha="right", fontsize=8
+            )
             ax.grid(axis="y", alpha=0.3)
 
         for j in range(total_h, len(axes_h)):
