@@ -84,17 +84,17 @@ def _format_compact_scientific(value: float) -> str:
 def _format_compact_scientific_two_line(value: float) -> str:
     """Two-line compact scientific notation for in-cell bar annotations.
 
-    Mantissa is kept at one decimal (``6.0`` rather than ``6``), followed
+    Mantissa is kept at two decimals (``6.00`` rather than ``6``), followed
     by a newline and the ``e{exponent}`` suffix. So ``0.011`` renders as::
 
-        1.1
+        1.10
         e-2
     """
     value = abs(float(value))
     if np.isclose(value, 0.0):
         return "0"
 
-    mantissa, exponent = f"{value:.1e}".split("e")
+    mantissa, exponent = f"{value:.2e}".split("e")
     return f"{mantissa}\ne{int(exponent)}"
 
 
@@ -1019,8 +1019,10 @@ def main(argv=None):
         # Emit both linear (default) and log-scale versions of _score_full
         # and _score_summary for every instance.
         for log_scale, suffix in [(False, ""), (True, "_log_scale")]:
-            # Figure size derived from desired physical bar/pad sizes
-            panel_h_in = 2.9 if log_scale else 3.4
+            # Figure size derived from desired physical bar/pad sizes.
+            # Linear and log-scale variants share the same panel height
+            # so the two PDFs are side-by-side comparable.
+            panel_h_in = 3.4
             fig_w, fig_h = _compute_figsize_grid(
                 len(tools_all), rows, cols, panel_h_in=panel_h_in
             )
@@ -1056,8 +1058,7 @@ def main(argv=None):
                         color=SIGN_COLORS[s], alpha=0.85,
                     )
                     annotate_bars(
-                        ax, bar, formatter=formatter,
-                        fontsize=6 if log_scale else 8,
+                        ax, bar, formatter=formatter, fontsize=8,
                     )
 
                 ax.axhline(0, linewidth=1)
@@ -1109,7 +1110,7 @@ def main(argv=None):
                     formatter=lambda value: format_score_label(
                         value, log_scale, two_line=True
                     ),
-                    fontsize=7 if log_scale else 8,
+                    fontsize=8,
                 )
 
             configure_score_axis(
