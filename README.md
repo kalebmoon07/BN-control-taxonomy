@@ -71,8 +71,8 @@ Outputs are generated under `experiments/results/`, including:
   - Each arc indicates that the source tool covers the target tool on all instances.
   - The graph for each instance is located at `/<group>/<instance>/_graph_tred.dot`.
   - Counterexamples for the coverage relations are listed in `counterexamples_first_match.csv` and `counterexamples_full_match.csv`.
-- The MCS scores are available as CSV files in `scores.csv`.
-- Figures plotting the MCS scores made by `evaluate_score.py` (not synchronized).
+- The MCS scores are available as a CSV file in `score.csv`.
+- Figures plotting the MCS scores made by `evaluate_score.py` (per-instance `_score_full(_log_scale)`, `_score_summary(_log_scale)`, `_histogram_sum_tool`, `_histogram_full`; not synchronized).
 
 ## Contributing to the project
 
@@ -93,10 +93,12 @@ Please see [CLI_COMMAND.md](CLI_COMMAND.md).
 If you use this framework in your research, please cite the following paper:
 
 ```bibtex
-@article{biane_2026_Why,
+@misc{biane_2026_Why,
   title = {Why {{Boolean}} Network Control Tools Disagree: A Taxonomy of Control Problems},
   author = {Biane, C{\'e}lia and Moon, Kyungduk and Lee, Kangbok and Paulev{\'e}, Lo{\"i}c},
   year = 2026,
-  note = {Submitted working paper},
+  pages = {2026.03.01.703722},
+  publisher = {bioRxiv},
+  doi = {10.64898/2026.03.01.703722},
 }
 ```

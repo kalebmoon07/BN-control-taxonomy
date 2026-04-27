@@ -76,6 +76,10 @@ Important options (see the script for full details):
 - `-o`, `--output` PATH: output directory for CSVs and figures (default `experiments/results`).
 - `--sort` {total,pos,neg}: Sorting method for genes in plots (default: `total`). Controls the gene ordering used in the generated plots.
 - `--format` {png,pdf}: Output figure format (default: `png`).
+- `--geo-mean`: aggregate the per-Gene/per-Sign summary plot with an epsilon-shifted geometric mean across tools (default: arithmetic mean).
+- `--geo-eps` FLOAT: epsilon shift for `--geo-mean` (default: `1e-6`).
+
+Both linear and symmetric-log y-axis variants of `_score_full` and `_score_summary` are emitted automatically (the log-scale version has a `_log_scale` filename suffix).
 
 Example:
 
@@ -86,7 +90,11 @@ python src/bntaxonomy/evaluate_score.py -ig experiments/instances/A_case_studies
 What it writes:
 
 - `score.csv` in the chosen output directory.
-- Per-instance figures: `<instance>/_score_histogram.<format>`, `<instance>/_score_full.<format>`, `<instance>/_score_summary.<format>`.
+- Per-instance figures under `<group>/<instance>/`:
+  - `_histogram_sum_tool.<format>` — per-tool control-size histogram.
+  - `_score_full.<format>` and `_score_full_log_scale.<format>` — per-gene grid of MCS bars (linear and symmetric-log y-axis).
+  - `_score_summary.<format>` and `_score_summary_log_scale.<format>` — averaged MCS across algorithms (linear and symmetric-log y-axis).
+  - `_histogram_full.<format>` — per-gene grid of per-tool solution-appearance counts (positive sign upward, negative sign downward).
 
 Example:
 

@@ -17,7 +17,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.transforms as mtransforms
-from matplotlib.ticker import FuncFormatter, MaxNLocator
+from matplotlib.ticker import FuncFormatter, MaxNLocator, NullLocator
 
 from bntaxonomy.hierarchy import MultiInputSummary
 
@@ -243,6 +243,22 @@ def annotate_score_axis(fig: plt.Figure, ax: plt.Axes):
     )
 
 
+def annotate_score_axis_fixed(fig: plt.Figure, ax: plt.Axes,
+                              pos_y: float = 0.75, neg_y: float = 0.25):
+    """Place sign labels at fixed axes-fraction positions.
+
+    Used by the count axis so that 'Activation' / 'Inhibition' sit at
+    identical heights regardless of how MaxNLocator chose tick spacing
+    for a particular figure.
+    """
+    trans = ax.transAxes
+    pad = mtransforms.ScaledTranslation(-0.55, 0, fig.dpi_scale_trans)
+    ax.text(0, pos_y, "Activation", transform=trans + pad,
+            rotation=90, va="center", ha="center", clip_on=False)
+    ax.text(0, neg_y, "Inhibition", transform=trans + pad,
+            rotation=90, va="center", ha="center", clip_on=False)
+
+
 def _build_symlog_ticks(limit: float, linthresh: float) -> list[float]:
     """Return symmetric powers-of-ten ticks up to the visible y-limit."""
     limit = max(float(limit), float(linthresh))
@@ -267,9 +283,20 @@ def _fixed_log_ticks() -> list[float]:
 
 
 def _score_tick_formatter(log_scale: bool) -> FuncFormatter:
+    # Suppress tick labels above |1| — the extra headroom (up to ±50) is
+    # only there so bar-top annotations don't collide with the axis edge.
+    def _suppress_above_one(formatter):
+        def wrapped(x, pos):
+            if abs(x) > 1.0 + 1e-9:
+                return ""
+            return formatter(x, pos)
+        return wrapped
+
     if log_scale:
-        return FuncFormatter(lambda x, pos: format_score_label(x, log_scale=True))
-    return FuncFormatter(lambda x, pos: f"{abs(x):.2f}")
+        base = lambda x, pos: format_score_label(x, log_scale=True)
+    else:
+        base = lambda x, pos: f"{abs(x):.2f}"
+    return FuncFormatter(_suppress_above_one(base))
 
 
 def configure_score_axis(
@@ -287,28 +314,21 @@ def configure_score_axis(
 
     if log_scale:
         # Fixed tick ladder: powers of 10 across ``SCORE_LOG_EXP_RANGE``
-        # on each sign (typically 10^-5 ... 10^0) plus 0 at the centre.
-        # The visible y-limit extends beyond the top tick so bar-top
-        # annotations have breathing room.
+        # on each sign (10^-5 ... 10^0) plus 0 at the centre. The visible
+        # y-limit is intentionally well beyond the top tick so bar-top
+        # annotations have breathing room without introducing |value| > 1
+        # tick marks.
         ticks = _fixed_log_ticks()
-        tick_limit = max(ticks)
-        if max_abs > tick_limit:
-            # Data exceeds the canonical top tick: stretch the ladder
-            # upward to the next decade covering the actual maximum.
-            extra = 10 ** math.ceil(math.log10(max_abs))
-            while tick_limit < extra:
-                tick_limit *= 10
-                ticks = (
-                    [-tick_limit] + ticks[:len(ticks) // 2]
-                    + [0.0] + ticks[len(ticks) // 2 + 1:] + [tick_limit]
-                )
-        y_limit = tick_limit * 1.6
+        y_limit = 50.0
 
         ax.set_yscale("symlog", linthresh=SCORE_LOG_LINTHRESH, linscale=1.0)
         ax.set_ylim(-y_limit, y_limit)
         ax.set_yticks(ticks)
+        # symlog's default minor locator keeps emitting decade ticks
+        # (10, 100, ...) inside the wider ylim — suppress them.
+        ax.yaxis.set_minor_locator(NullLocator())
     else:
-        ax.set_ylim(-1.15, 1.15)
+        ax.set_ylim(-1.20, 1.20)
         ax.set_yticks(LINEAR_SCORE_TICKS)
 
     ax.yaxis.set_major_formatter(_score_tick_formatter(log_scale))
@@ -319,12 +339,22 @@ def configure_score_axis(
 
     if show_side_labels:
         ax.set_ylabel(" ")
-        annotate_score_axis(fig, ax)
+        if log_scale:
+            annotate_score_axis(fig, ax)
+        else:
+            annotate_score_axis_fixed(fig, ax)
     else:
         ax.set_ylabel(None)
 
 
-def configure_count_axis(ax: plt.Axes, fig: plt.Figure, values):
+def configure_count_axis(
+    ax: plt.Axes,
+    fig: plt.Figure,
+    values,
+    *,
+    show_ticklabels: bool = True,
+    show_side_labels: bool = True,
+):
     """Apply a symmetric linear axis for signed solution counts."""
     max_abs = int(np.max(np.abs(np.asarray(values, dtype=float)))) if len(values) else 0
     y_limit = max(1, max_abs)
@@ -333,8 +363,16 @@ def configure_count_axis(ax: plt.Axes, fig: plt.Figure, values):
     ax.yaxis.set_major_formatter(
         FuncFormatter(lambda x, pos: "0" if np.isclose(x, 0.0) else f"{int(round(abs(x)))}")
     )
-    ax.set_ylabel(" ")
-    annotate_score_axis(fig, ax)
+    if show_ticklabels:
+        ax.tick_params(axis="y", labelleft=True)
+    else:
+        ax.tick_params(axis="y", labelleft=False)
+
+    if show_side_labels:
+        ax.set_ylabel(" ")
+        annotate_score_axis_fixed(fig, ax)
+    else:
+        ax.set_ylabel(None)
 
 
 # ---------------------------------------------------------------------
@@ -677,24 +715,6 @@ def main(argv=None):
         default=1e-6,
         help="Epsilon shift for --geo-mean (default: 1e-6).",
     )
-    parser.add_argument(
-        "--topk",
-        nargs="+",
-        type=int,
-        default=[3, 5, 10, 15, 20, 30, 60],
-        help=(
-            "k values for the top-k Spearman vs ensemble heatmap. "
-            "Entries exceeding an instance's gene count are skipped."
-        ),
-    )
-    parser.add_argument(
-        "--log-scale",
-        action="store_true",
-        help=(
-            "Use a symmetric logarithmic y-axis for score plots "
-            "(_score_full and _score_summary)."
-        ),
-    )
     args = parser.parse_args(argv)
 
     if args.genes:
@@ -840,14 +860,15 @@ def main(argv=None):
         mcs_outdir.mkdir(parents=True, exist_ok=True)
 
         inst_score_df = mcs_score_df[mcs_score_df["Instance"] == inst]
-        _write_family_partition(ctrls, families, mcs_outdir)
-        _write_family_jaccard(ctrls, families, mcs_outdir, args.format, inst)
-        _write_family_containment(ctrls, families, mcs_outdir, args.format, inst)
-        for sign in (0, 1):
-            _write_topk_spearman_vs_ensemble(
-                inst_score_df, families, mcs_outdir, sign,
-                args.topk, args.geo_mean, args.geo_eps, args.format, inst,
-            )
+        # Disabled per user request — outputs not currently needed.
+        # _write_family_partition(ctrls, families, mcs_outdir)
+        # _write_family_jaccard(ctrls, families, mcs_outdir, args.format, inst)
+        # _write_family_containment(ctrls, families, mcs_outdir, args.format, inst)
+        # for sign in (0, 1):
+        #     _write_topk_spearman_vs_ensemble(
+        #         inst_score_df, families, mcs_outdir, sign,
+        #         args.topk, args.geo_mean, args.geo_eps, args.format, inst,
+        #     )
 
     for inst, sub_df in count_df.groupby("Instance", sort=False):
         inst_group = hc.get_exp_group_name_from_exp(inst)
@@ -891,7 +912,7 @@ def main(argv=None):
 
         os.makedirs(f"{opath}/{inst_group}/{inst}", exist_ok=True)
         fig.savefig(
-            f"{opath}/{inst_group}/{inst}/_score_histogram.{args.format}",
+            f"{opath}/{inst_group}/{inst}/_histogram_sum_tool.{args.format}",
             dpi=200,
             bbox_inches="tight",
         )
@@ -939,91 +960,10 @@ def main(argv=None):
             cols = max(1, int(math.ceil(math.sqrt(total))))
             rows = int(math.ceil(total / cols))
 
-        # Figure size derived from desired physical bar/pad sizes
-        panel_h_in = 2.9 if args.log_scale else 3.4
-        fig_w, fig_h = _compute_figsize_grid(len(tools_all), rows, cols, panel_h_in=panel_h_in)
-        fig, axes = plt.subplots(
-            rows, cols, figsize=(fig_w, fig_h), sharex=True, sharey=True
-        )
-        axes = np.array(axes).reshape(-1)
-
-        # Convert inch spacings into figure-fractions for precise layout
-        bottom_margin_full_in = MARGIN_TB_IN + FULL_FIG_XLABEL_PAD_IN
-        fig.subplots_adjust(
-            left=MARGIN_LR_IN / fig_w,
-            right=1 - MARGIN_LR_IN / fig_w,
-            top=1 - MARGIN_TB_IN / fig_h,
-            bottom=bottom_margin_full_in / fig_h,
-            wspace=(WSPACE_IN / (len(tools_all) * _slot_in())) if cols > 1 else 0.2,
-            hspace=(HSPACE_IN / panel_h_in) if rows > 1 else 0.25,
-        )
         full_plot_values = sub_df["score"].to_numpy()
 
-        # Per-gene panels
-        for i, (gene, g) in enumerate(
-            sub_df.groupby("Gene", sort=True, observed=False)
-        ):
-            ax: plt.Axes = axes[i]
-            g = g.set_index("Sign")
-            n_bars = len(tools_all)
-            x = np.arange(n_bars) + 0.5  # centers at 0.5, 1.5, ...
-            ax.set_xlim(0, n_bars)  # 1 data unit == one (bar+gap) slot
-            formatter = lambda value: format_score_label(
-                value, args.log_scale, two_line=True
-            )
-            for s in (0, 1):
-                bar = ax.bar(
-                    x, g.loc[s, "score"], width_frac, color=SIGN_COLORS[s], alpha=0.85
-                )
-                annotate_bars(
-                    ax,
-                    bar,
-                    formatter=formatter,
-                    fontsize=6 if args.log_scale else 8,
-                )
-
-            ax.axhline(0, linewidth=1)
-            ax.set_title(f"{gene}", fontsize=9)
-
-            row_idx = i // cols
-            col_idx = i % cols
-            show_bottom = row_idx == rows - 1 or i + cols >= total
-            show_left = col_idx == 0
-            configure_score_axis(
-                ax,
-                fig,
-                full_plot_values,
-                args.log_scale,
-                show_ticklabels=show_left,
-                show_side_labels=show_left,
-            )
-
-            ax.set_xticks(x)
-            if show_bottom:
-                ax.set_xticklabels(tools_all, rotation=35, ha="right", fontsize=8)
-            else:
-                ax.tick_params(axis="x", labelbottom=False)
-            ax.grid(axis="y", alpha=0.3)
-
-        # Hide any unused axes
-        for j in range(total, len(axes)):
-            axes[j].set_visible(False)
-
-        fig.suptitle(f"Instance={inst}", y=0.995, fontsize=12)
-        fig.supxlabel("Algorithm", y=0.01)
-        os.makedirs(f"{opath}/{inst_group}/{inst}", exist_ok=True)
-        fig.savefig(
-            f"{opath}/{inst_group}/{inst}/_score_full.{args.format}",
-            dpi=200,
-            bbox_inches="tight",
-            pad_inches=0.3,
-        )
-        plt.close(fig)
-
-        # -----------------------------------------------------------------
-        # Summary-only (average over algorithms, 1 row figure)
-        # -----------------------------------------------------------------
-
+        # Pre-compute per-instance summary aggregation once; the same data
+        # feeds both the linear and log-scale summary figures.
         if args.geo_mean:
             eps = args.geo_eps
 
@@ -1052,124 +992,254 @@ def main(argv=None):
                 .reset_index()
             )
 
-        # gene_sorted = sort_by_neg_score(sub_df)
+        # Sort genes by the same aggregation that the summary plot
+        # displays (geo or arith mean) so the gene order matches what the
+        # user sees in _score_summary, instead of the raw per-tool sums.
         if args.sort == "total":
-            gene_sorted = sort_by_total_score(sub_df)
+            gene_sorted = sort_by_total_score(sum_by_gene)
         elif args.sort == "pos":
-            gene_sorted = sort_by_pos_score(sub_df)
+            gene_sorted = sort_by_pos_score(sum_by_gene)
         else:  # args.sort == "neg"
-            gene_sorted = sort_by_neg_score(sub_df)
+            gene_sorted = sort_by_neg_score(sum_by_gene)
         sum_by_gene["Gene"] = pd.Categorical(
             sum_by_gene["Gene"], categories=gene_sorted, ordered=True
         )
-        sum_by_gene = sum_by_gene.sort_values("Gene")
-        sum_by_gene = sum_by_gene.set_index("Sign")
+        sum_by_gene = sum_by_gene.sort_values("Gene").set_index("Sign")
 
         n_gene = len(genes_order)
         content_gene_w = max(1, n_gene) * _slot_in()
         fig_w_s = content_gene_w + 2 * MARGIN_LR_IN
         fig_h_s = 4
 
-        fig_s, ax_sum = layout_single_axes(fig_w_s, fig_h_s)
-
-        xg = np.arange(n_gene) + 0.5
-        ax_sum.set_xlim(0, n_gene)
-        for s in (0, 1):
-            bars = ax_sum.bar(
-                xg,
-                sum_by_gene.loc[s, "score"],
-                width_frac,
-                color=SIGN_COLORS[s],
-                alpha=0.85,
-            )
-            annotate_bars(
-                ax_sum,
-                bars,
-                formatter=lambda value: format_score_label(
-                    value, args.log_scale, two_line=True
-                ),
-                fontsize=7 if args.log_scale else 8,
-            )
-
-        configure_score_axis(ax_sum, fig_s, sum_by_gene["score"].to_numpy(), args.log_scale)
-        ax_sum.axhline(0, linewidth=1)
-        ax_sum.set_title(
-            "Geometric mean over algorithms" if args.geo_mean
-            else "Arithmetic mean over algorithms"
-        )
-        ax_sum.set_xlabel("Gene")
-        ax_sum.set_xticks(xg, gene_sorted, rotation=45, ha="right")
-        ax_sum.grid(axis="y", alpha=0.3)
-
-        fig_s.suptitle(f"Instance={inst} — Summary", y=0.98, fontsize=12)
         os.makedirs(f"{opath}/{inst_group}/{inst}", exist_ok=True)
-        fig_s.savefig(
-            f"{opath}/{inst_group}/{inst}/_score_summary.{args.format}",
-            dpi=200,
-            bbox_inches="tight",
-            pad_inches=0.3,
-        )
-        plt.close(fig_s)
+
+        # Emit both linear (default) and log-scale versions of _score_full
+        # and _score_summary for every instance.
+        for log_scale, suffix in [(False, ""), (True, "_log_scale")]:
+            # Figure size derived from desired physical bar/pad sizes
+            panel_h_in = 2.9 if log_scale else 3.4
+            fig_w, fig_h = _compute_figsize_grid(
+                len(tools_all), rows, cols, panel_h_in=panel_h_in
+            )
+            fig, axes = plt.subplots(
+                rows, cols, figsize=(fig_w, fig_h), sharex=True, sharey=True
+            )
+            axes = np.array(axes).reshape(-1)
+
+            bottom_margin_full_in = MARGIN_TB_IN + FULL_FIG_XLABEL_PAD_IN
+            fig.subplots_adjust(
+                left=MARGIN_LR_IN / fig_w,
+                right=1 - MARGIN_LR_IN / fig_w,
+                top=1 - MARGIN_TB_IN / fig_h,
+                bottom=bottom_margin_full_in / fig_h,
+                wspace=(WSPACE_IN / (len(tools_all) * _slot_in())) if cols > 1 else 0.2,
+                hspace=(HSPACE_IN / panel_h_in) if rows > 1 else 0.25,
+            )
+
+            for i, (gene, g) in enumerate(
+                sub_df.groupby("Gene", sort=True, observed=False)
+            ):
+                ax: plt.Axes = axes[i]
+                g = g.set_index("Sign")
+                n_bars = len(tools_all)
+                x = np.arange(n_bars) + 0.5
+                ax.set_xlim(0, n_bars)
+                formatter = lambda value: format_score_label(
+                    value, log_scale, two_line=True
+                )
+                for s in (0, 1):
+                    bar = ax.bar(
+                        x, g.loc[s, "score"], width_frac,
+                        color=SIGN_COLORS[s], alpha=0.85,
+                    )
+                    annotate_bars(
+                        ax, bar, formatter=formatter,
+                        fontsize=6 if log_scale else 8,
+                    )
+
+                ax.axhline(0, linewidth=1)
+                ax.set_title(f"{gene}", fontsize=9)
+
+                row_idx = i // cols
+                col_idx = i % cols
+                show_bottom = row_idx == rows - 1 or i + cols >= total
+                show_left = col_idx == 0
+                configure_score_axis(
+                    ax, fig, full_plot_values, log_scale,
+                    show_ticklabels=show_left,
+                    show_side_labels=show_left,
+                )
+
+                ax.set_xticks(x)
+                if show_bottom:
+                    ax.set_xticklabels(
+                        tools_all, rotation=35, ha="right", fontsize=8
+                    )
+                else:
+                    ax.tick_params(axis="x", labelbottom=False)
+                ax.grid(axis="y", alpha=0.3)
+
+            for j in range(total, len(axes)):
+                axes[j].set_visible(False)
+
+            fig.suptitle(f"Instance={inst}", y=0.995, fontsize=12)
+            fig.supxlabel("Algorithm", y=0.01)
+            fig.savefig(
+                f"{opath}/{inst_group}/{inst}/_score_full{suffix}.{args.format}",
+                dpi=200, bbox_inches="tight", pad_inches=0.3,
+            )
+            plt.close(fig)
+
+            # -----------------------------------------------------------------
+            # Summary-only (average over algorithms, 1 row figure)
+            # -----------------------------------------------------------------
+            fig_s, ax_sum = layout_single_axes(fig_w_s, fig_h_s)
+            xg = np.arange(n_gene) + 0.5
+            ax_sum.set_xlim(0, n_gene)
+            for s in (0, 1):
+                bars = ax_sum.bar(
+                    xg, sum_by_gene.loc[s, "score"], width_frac,
+                    color=SIGN_COLORS[s], alpha=0.85,
+                )
+                annotate_bars(
+                    ax_sum, bars,
+                    formatter=lambda value: format_score_label(
+                        value, log_scale, two_line=True
+                    ),
+                    fontsize=7 if log_scale else 8,
+                )
+
+            configure_score_axis(
+                ax_sum, fig_s, sum_by_gene["score"].to_numpy(), log_scale
+            )
+            ax_sum.axhline(0, linewidth=1)
+            ax_sum.set_title(
+                "Geometric mean over algorithms" if args.geo_mean
+                else "Arithmetic mean over algorithms"
+            )
+            ax_sum.set_xlabel("Gene")
+            ax_sum.set_xticks(xg, gene_sorted, rotation=45, ha="right")
+            ax_sum.grid(axis="y", alpha=0.3)
+
+            fig_s.suptitle(f"Instance={inst} — Summary", y=0.98, fontsize=12)
+            fig_s.savefig(
+                f"{opath}/{inst_group}/{inst}/_score_summary{suffix}.{args.format}",
+                dpi=200, bbox_inches="tight", pad_inches=0.3,
+            )
+            plt.close(fig_s)
 
         # -----------------------------------------------------------------
-        # Histogram: number of solutions containing each gene/sign
+        # Per-gene histogram grid (mirrors the _score_full layout): one
+        # panel per gene, one bar per tool inside each panel. Positive
+        # counts (sign=1) above zero, negative counts (sign=0) below.
         # -----------------------------------------------------------------
         inst_solution_df = solution_gene_df[solution_gene_df["Instance"] == inst]
-        gene_count_df = (
-            inst_solution_df.groupby(["Gene", "Sign"], observed=True)
+        tools_list = list(tools_all)
+        n_tools = len(tools_list)
+
+        per_tool_counts = (
+            inst_solution_df.groupby(
+                ["Gene", "Algorithm", "Sign"], observed=True
+            )
             .size()
-            .reset_index(name="count")
-        )
-        gene_count_df = gene_count_df[gene_count_df["Gene"].isin(gene_sorted)]
-        gene_count_wide = (
-            gene_count_df.pivot(index="Gene", columns="Sign", values="count")
-            .reindex(gene_sorted)
-            .fillna(0)
+            .unstack("Sign", fill_value=0)
         )
         for sign in (0, 1):
-            if sign not in gene_count_wide.columns:
-                gene_count_wide[sign] = 0
-        gene_count_wide = gene_count_wide[[0, 1]]
+            if sign not in per_tool_counts.columns:
+                per_tool_counts[sign] = 0
+        per_tool_counts = per_tool_counts[[0, 1]]
 
-        fig_c, ax_count = layout_single_axes(fig_w_s, fig_h_s)
-        xc = np.arange(n_gene) + 0.5
-        ax_count.set_xlim(0, n_gene)
-        pos_counts = gene_count_wide[1].to_numpy(dtype=float)
-        neg_counts = -gene_count_wide[0].to_numpy(dtype=float)
+        full_idx = pd.MultiIndex.from_product(
+            [genes_order, tools_list], names=["Gene", "Algorithm"]
+        )
+        per_tool_counts = per_tool_counts.reindex(full_idx, fill_value=0)
 
-        pos_bars = ax_count.bar(
-            xc, pos_counts, width_frac, color=SIGN_COLORS[1], alpha=0.85
+        m_h = len(genes_order)
+        total_h = m_h
+        if m_h <= 3:
+            rows_h, cols_h = m_h, 1
+        else:
+            cols_h = max(1, int(math.ceil(math.sqrt(total_h))))
+            rows_h = int(math.ceil(total_h / cols_h))
+
+        panel_h_in_h = 3.4
+        fig_w_h, fig_h_h = _compute_figsize_grid(
+            n_tools, rows_h, cols_h, panel_h_in=panel_h_in_h
         )
-        neg_bars = ax_count.bar(
-            xc, neg_counts, width_frac, color=SIGN_COLORS[0], alpha=0.85
+        fig_c, axes_h = plt.subplots(
+            rows_h, cols_h, figsize=(fig_w_h, fig_h_h),
+            sharex=True, sharey=True,
         )
-        annotate_bars(
-            ax_count,
-            pos_bars,
-            formatter=lambda value: str(int(round(abs(value)))),
-        )
-        annotate_bars(
-            ax_count,
-            neg_bars,
-            formatter=lambda value: str(int(round(abs(value)))),
+        axes_h = np.array(axes_h).reshape(-1)
+
+        bottom_margin_full_in = MARGIN_TB_IN + FULL_FIG_XLABEL_PAD_IN
+        fig_c.subplots_adjust(
+            left=MARGIN_LR_IN / fig_w_h,
+            right=1 - MARGIN_LR_IN / fig_w_h,
+            top=1 - MARGIN_TB_IN / fig_h_h,
+            bottom=bottom_margin_full_in / fig_h_h,
+            wspace=(WSPACE_IN / (n_tools * _slot_in())) if cols_h > 1 else 0.2,
+            hspace=(HSPACE_IN / panel_h_in_h) if rows_h > 1 else 0.25,
         )
 
-        configure_count_axis(
-            ax_count,
-            fig_c,
-            np.concatenate([pos_counts, neg_counts]) if n_gene else np.array([0]),
+        all_pos = per_tool_counts[1].to_numpy(dtype=float)
+        all_neg = -per_tool_counts[0].to_numpy(dtype=float)
+        global_counts = (
+            np.concatenate([all_pos, all_neg]) if m_h else np.array([0])
         )
-        ax_count.axhline(0, linewidth=1)
-        ax_count.set_title("Gene appearance count across solutions")
-        ax_count.set_xlabel("Gene")
-        ax_count.set_xticks(xc, gene_sorted, rotation=45, ha="right")
-        ax_count.grid(axis="y", alpha=0.3)
 
-        fig_c.suptitle(f"Instance={inst} — Solution histogram", y=0.98, fontsize=12)
+        x_h = np.arange(n_tools) + 0.5
+        for i, gene in enumerate(genes_order):
+            ax: plt.Axes = axes_h[i]
+            pos_h = per_tool_counts.loc[gene, 1].to_numpy(dtype=float)
+            neg_h = -per_tool_counts.loc[gene, 0].to_numpy(dtype=float)
+            ax.set_xlim(0, n_tools)
+            pos_bars = ax.bar(
+                x_h, pos_h, width_frac, color=SIGN_COLORS[1], alpha=0.85
+            )
+            neg_bars = ax.bar(
+                x_h, neg_h, width_frac, color=SIGN_COLORS[0], alpha=0.85
+            )
+            annotate_bars(
+                ax, pos_bars,
+                formatter=lambda v: str(int(round(abs(v)))),
+            )
+            annotate_bars(
+                ax, neg_bars,
+                formatter=lambda v: str(int(round(abs(v)))),
+            )
+
+            ax.axhline(0, linewidth=1)
+            ax.set_title(f"{gene}", fontsize=9)
+
+            row_idx = i // cols_h
+            col_idx = i % cols_h
+            show_bottom = row_idx == rows_h - 1 or i + cols_h >= total_h
+            show_left = col_idx == 0
+            configure_count_axis(
+                ax, fig_c, global_counts,
+                show_ticklabels=show_left,
+                show_side_labels=show_left,
+            )
+
+            ax.set_xticks(x_h)
+            if show_bottom:
+                ax.set_xticklabels(
+                    tools_list, rotation=35, ha="right", fontsize=8
+                )
+            else:
+                ax.tick_params(axis="x", labelbottom=False)
+            ax.grid(axis="y", alpha=0.3)
+
+        for j in range(total_h, len(axes_h)):
+            axes_h[j].set_visible(False)
+
+        fig_c.suptitle(f"Instance={inst} — Solution histogram",
+                       y=0.995, fontsize=12)
+        fig_c.supxlabel("Algorithm", y=0.01)
         fig_c.savefig(
-            f"{opath}/{inst_group}/{inst}/_solution_gene_histogram.{args.format}",
-            dpi=200,
-            bbox_inches="tight",
+            f"{opath}/{inst_group}/{inst}/_histogram_full.{args.format}",
+            dpi=200, bbox_inches="tight", pad_inches=0.3,
         )
         plt.close(fig_c)
 
