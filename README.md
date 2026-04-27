@@ -1,4 +1,4 @@
-# Comparing control sets from Boolean network control software tools
+# A Comparative Framework for Boolean Network Control Tools
 
 This repository provides a framework to run various Boolean network control software tools on a collection of benchmark instances and compare their results.
 Given a Boolean network and a phenotype formula as an input, these tools compute (minimal) control sets where the phenotype is satisfied by their target states (e.g., fixed points, attractors, minimal trap spaces, etc.).
