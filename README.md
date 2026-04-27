@@ -72,7 +72,7 @@ Outputs are generated under `experiments/results/`, including:
   - The graph for each instance is located at `/<group>/<instance>/_graph_tred.dot`.
   - Counterexamples for the coverage relations are listed in `counterexamples_first_match.csv` and `counterexamples_full_match.csv`.
 - The MCS scores are available as a CSV file in `score.csv`.
-- Figures plotting the MCS scores made by `evaluate_score.py` (per-instance `_score_full(_log_scale)`, `_score_summary(_log_scale)`, `_histogram_sum_tool`, `_histogram_full`; not synchronized).
+- Figures plotting the MCS scores made by `evaluate_score.py` (per-instance `_score_full(_log_scale)`, `_score_summary(_log_scale)`, `_histogram_sum_tool`, `_histogram_full`; not synchronized). See [SCORE_README.md](SCORE_README.md) for a per-file description.
 
 ## Contributing to the project
 
