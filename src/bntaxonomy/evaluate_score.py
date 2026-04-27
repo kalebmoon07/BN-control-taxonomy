@@ -459,7 +459,7 @@ def _per_family_mcs(score_df: pd.DataFrame, families: Dict[str, List[str]],
     fam_list = list(families)
     tool_to_fam = {t: f for f, ts in families.items() for t in ts}
     df = score_df[score_df["Sign"] == sign].copy()
-    df["family"] = df["Algorithm"].map(tool_to_fam)
+    df["family"] = df["Tool"].map(tool_to_fam)
     df = df.dropna(subset=["family"])
 
     if geo:
@@ -815,22 +815,22 @@ def main(argv=None):
     #       to the selected genes (if provided).
     # -----------------------------------------------------------------
     count_df = pd.DataFrame(
-        count_list, columns=["Instance", "Algorithm", "BN_size", "ControlSize", "Genes"]
+        count_list, columns=["Instance", "Tool", "BN_size", "ControlSize", "Genes"]
     )
     mcs_score_df = pd.DataFrame(
         mcs_score_list,
-        columns=["Instance", "Algorithm", "Gene", "Sign", "BN_size", "score"],
+        columns=["Instance", "Tool", "Gene", "Sign", "BN_size", "score"],
     )
     solution_gene_df = pd.DataFrame(
-        solution_gene_list, columns=["Instance", "Algorithm", "Gene", "Sign"]
+        solution_gene_list, columns=["Instance", "Tool", "Gene", "Sign"]
     )
     if selected_tools:
-        count_df["Algorithm"] = count_df["Algorithm"].astype(cat_type)
-        mcs_score_df["Algorithm"] = mcs_score_df["Algorithm"].astype(cat_type)
+        count_df["Tool"] = count_df["Tool"].astype(cat_type)
+        mcs_score_df["Tool"] = mcs_score_df["Tool"].astype(cat_type)
         if not solution_gene_df.empty:
-            solution_gene_df["Algorithm"] = solution_gene_df["Algorithm"].astype(cat_type)
+            solution_gene_df["Tool"] = solution_gene_df["Tool"].astype(cat_type)
     mcs_score_df = mcs_score_df.sort_values(
-        by=["Instance", "Algorithm", "Gene", "Sign"]
+        by=["Instance", "Tool", "Gene", "Sign"]
     )
     mcs_score_df.to_csv(f"{opath}/score.csv", index=False)
 
@@ -872,7 +872,7 @@ def main(argv=None):
 
     for inst, sub_df in count_df.groupby("Instance", sort=False):
         inst_group = hc.get_exp_group_name_from_exp(inst)
-        ct1 = pd.crosstab(sub_df["Algorithm"], sub_df["ControlSize"]).sort_index()
+        ct1 = pd.crosstab(sub_df["Tool"], sub_df["ControlSize"]).sort_index()
         # Ensure columns for both control sizes exist (1, 2)
         full_sizes = [1, 2]
         ct1 = ct1.reindex(columns=full_sizes, fill_value=0)
@@ -906,7 +906,10 @@ def main(argv=None):
 
         ax.set_xticks(x, tools, rotation=45)
         ax.grid(True, axis="y", alpha=0.25)
-        ax.legend(title="ControlSize", loc="center left", bbox_to_anchor=(1.01, 0.5))
+        ax.set_title(f"Instance={inst} — Control set count by tool and size (=# genes)")
+        ax.set_xlabel("Tool")
+        ax.set_ylabel("Number of control sets")
+        ax.legend(title="Control size", loc="center left", bbox_to_anchor=(1.01, 0.5))
         ax.set_ylim(0, max(1, int(ct1.to_numpy().max())) * 1.15)  # headroom for labels)
         plt.subplots_adjust(bottom=0.22, right=0.85)
 
@@ -930,10 +933,10 @@ def main(argv=None):
     for inst, sub_df in mcs_score_df.groupby("Instance", sort=False):
         inst_group = hc.get_exp_group_name_from_exp(inst)
         sub_df: pd.DataFrame = sub_df.groupby(
-            ["Algorithm", "Gene", "Sign"], as_index=False, observed=True
+            ["Tool", "Gene", "Sign"], as_index=False, observed=True
         )["score"].sum()
 
-        tools_all = sub_df["Algorithm"].unique()
+        tools_all = sub_df["Tool"].unique()
         # Determine order for this instance
         if selected_gene_order is not None:
             genes_order = [
@@ -949,7 +952,7 @@ def main(argv=None):
         sub_df["Gene"] = pd.Categorical(
             sub_df["Gene"], categories=genes_order, ordered=True
         )
-        sub_df = sub_df.sort_values(["Gene", "Sign", "Algorithm"])
+        sub_df = sub_df.sort_values(["Gene", "Sign", "Tool"])
 
         m = len(genes_order)
 
@@ -1083,7 +1086,7 @@ def main(argv=None):
                 axes[j].set_visible(False)
 
             fig.suptitle(f"Instance={inst}", y=0.995, fontsize=12)
-            fig.supxlabel("Algorithm", y=0.01)
+            fig.supxlabel("Tool", y=0.01)
             fig.savefig(
                 f"{opath}/{inst_group}/{inst}/_score_full{suffix}.{args.format}",
                 dpi=200, bbox_inches="tight", pad_inches=0.3,
@@ -1091,7 +1094,7 @@ def main(argv=None):
             plt.close(fig)
 
             # -----------------------------------------------------------------
-            # Summary-only (average over algorithms, 1 row figure)
+            # Summary-only (average over tools, 1 row figure)
             # -----------------------------------------------------------------
             fig_s, ax_sum = layout_single_axes(fig_w_s, fig_h_s)
             xg = np.arange(n_gene) + 0.5
@@ -1114,8 +1117,8 @@ def main(argv=None):
             )
             ax_sum.axhline(0, linewidth=1)
             ax_sum.set_title(
-                "Geometric mean over algorithms" if args.geo_mean
-                else "Arithmetic mean over algorithms"
+                "Geometric mean over tools" if args.geo_mean
+                else "Arithmetic mean over tools"
             )
             ax_sum.set_xlabel("Gene")
             ax_sum.set_xticks(xg, gene_sorted, rotation=45, ha="right")
@@ -1139,7 +1142,7 @@ def main(argv=None):
 
         per_tool_counts = (
             inst_solution_df.groupby(
-                ["Gene", "Algorithm", "Sign"], observed=True
+                ["Gene", "Tool", "Sign"], observed=True
             )
             .size()
             .unstack("Sign", fill_value=0)
@@ -1150,7 +1153,7 @@ def main(argv=None):
         per_tool_counts = per_tool_counts[[0, 1]]
 
         full_idx = pd.MultiIndex.from_product(
-            [genes_order, tools_list], names=["Gene", "Algorithm"]
+            [genes_order, tools_list], names=["Gene", "Tool"]
         )
         per_tool_counts = per_tool_counts.reindex(full_idx, fill_value=0)
 
@@ -1236,7 +1239,7 @@ def main(argv=None):
 
         fig_c.suptitle(f"Instance={inst} — Solution histogram",
                        y=0.995, fontsize=12)
-        fig_c.supxlabel("Algorithm", y=0.01)
+        fig_c.supxlabel("Tool", y=0.01)
         fig_c.savefig(
             f"{opath}/{inst_group}/{inst}/_histogram_full.{args.format}",
             dpi=200, bbox_inches="tight", pad_inches=0.3,

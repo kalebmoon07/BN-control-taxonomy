@@ -93,7 +93,7 @@ What it writes:
 - Per-instance figures under `<group>/<instance>/`:
   - `_histogram_sum_tool.<format>` — per-tool control-size histogram.
   - `_score_full.<format>` and `_score_full_log_scale.<format>` — per-gene grid of MCS bars (linear and symmetric-log y-axis).
-  - `_score_summary.<format>` and `_score_summary_log_scale.<format>` — averaged MCS across algorithms (linear and symmetric-log y-axis).
+  - `_score_summary.<format>` and `_score_summary_log_scale.<format>` — averaged MCS across tools (linear and symmetric-log y-axis).
   - `_histogram_full.<format>` — per-gene grid of per-tool solution-appearance counts (positive sign upward, negative sign downward).
 
 Example:

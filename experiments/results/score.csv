@@ -1,4 +1,4 @@
-Instance,Algorithm,Gene,Sign,BN_size,score
+Instance,Tool,Gene,Sign,BN_size,score
 A1_Bladder,ActoNet,AKT,0,35,0.044563279857397504
 A1_Bladder,ActoNet,AKT,1,35,0.044563279857397504
 A1_Bladder,ActoNet,ATM_b1,0,35,0.04434046345811052
