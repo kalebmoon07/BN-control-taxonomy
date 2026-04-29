@@ -9,7 +9,7 @@ The main feature is the command line interface (CLI) for the following analyses:
 - A **coverage graph** to compare the control sets found by each tool for each instance.
   - If every control found by tool A has another subset control found by tool B, then tool A  _covers_ tool B for that instance.
 - The **Mutation Co-occurrence Score** (MCS) for each mutation $(x_i=b)$ predicted by each tool
-  - Given a mutation and a control set, it measures the fraction of the controls containing the mutation that controls in the set cover.
+  - Given a mutation and a control set, MCS aggregates the contributions of all minimal controls (See [SCORE_README.md](./SCORE_README.md) for the full definition).
   - This metric is consistent with the coverage graph: if tool A covers tool B, then tool B has higher or equal MCS scores than tool A for all mutations.
   - An ensemble prediction can be made as the average MCS score across a selection of tools.
 

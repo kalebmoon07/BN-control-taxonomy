@@ -5,10 +5,18 @@ multiple Boolean-network control tools agree (or disagree) on which
 gene mutations control a given phenotype.
 
 The central quantity is the **Mutation Co-occurrence Score (MCS)**: for
-a single tool and a single mutation `(gene = 0/1)`, MCS is the
-fraction of that tool's reported control sets in which the mutation
-appears. MCS = 1 means every control set the tool produced uses that
-mutation; MCS = 0 means none.
+a single tool and a single mutation `(gene = 0/1)`, MCS is a weighted
+aggregate of the tool's reported controls that are compatible with the
+mutation. Each control is first augmented by appending the mutation
+(controls assigning the opposite value to the gene are discarded as
+contradictory), and only minimal controls in the augmented set
+contribute. A control of size `k` contributes
+`prod_{c=1..k-1} 1 / (2 * (n - c))`, where `n` is the number of
+variables in the network. MCS lies in `[0, 1]`; MCS = 1 means the
+mutation alone — or together with the empty control — is sufficient on
+every reported control; MCS = 0 means every reported control
+contradicts the mutation. See the paper for the
+full definition.
 
 ## Sign convention (used everywhere)
 
@@ -76,3 +84,16 @@ Long-format table, one row per (Instance, Tool, Gene, Sign):
 
 Genes a tool never reports get a constant default score, so every
 (Instance, Tool, Gene, Sign) row exists in the table.
+
+## References
+
+```bibtex
+@misc{biane_2026_Why,
+  title = {Why {{Boolean}} Network Control Tools Disagree: A Taxonomy of Control Problems},
+  author = {Biane, C{\'e}lia and Moon, Kyungduk and Lee, Kangbok and Paulev{\'e}, Lo{\"i}c},
+  year = 2026,
+  pages = {2026.03.01.703722},
+  publisher = {bioRxiv},
+  doi = {10.64898/2026.03.01.703722},
+}
+```
